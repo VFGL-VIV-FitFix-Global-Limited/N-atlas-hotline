@@ -1,0 +1,137 @@
+[
+  {
+    "commodity": "rice",
+    "market_name": "Mile 12",
+    "state": "Lagos",
+    "price": 85000,
+    "unit": "50kg bag",
+    "source": "seed",
+    "reported_at": "2026-10-08"
+  },
+  {
+    "commodity": "rice",
+    "market_name": "Bodija",
+    "state": "Oyo",
+    "price": 82000,
+    "unit": "50kg bag",
+    "source": "seed",
+    "reported_at": "2026-10-08"
+  },
+  {
+    "commodity": "rice",
+    "market_name": "Dawanau",
+    "state": "Kano",
+    "price": 78000,
+    "unit": "50kg bag",
+    "source": "seed",
+    "reported_at": "2026-10-07"
+  },
+  {
+    "commodity": "beans",
+    "market_name": "Mile 12",
+    "state": "Lagos",
+    "price": 95000,
+    "unit": "100kg bag",
+    "source": "seed",
+    "reported_at": "2026-10-08"
+  },
+  {
+    "commodity": "beans",
+    "market_name": "Bodija",
+    "state": "Oyo",
+    "price": 90000,
+    "unit": "100kg bag",
+    "source": "seed",
+    "reported_at": "2026-10-08"
+  },
+  {
+    "commodity": "tomato",
+    "market_name": "Mile 12",
+    "state": "Lagos",
+    "price": 18000,
+    "unit": "basket",
+    "source": "seed",
+    "reported_at": "2026-10-09"
+  },
+  {
+    "commodity": "tomato",
+    "market_name": "Giwa",
+    "state": "Kaduna",
+    "price": 8500,
+    "unit": "basket",
+    "source": "seed",
+    "reported_at": "2026-10-08"
+  },
+  {
+    "commodity": "maize",
+    "market_name": "Dawanau",
+    "state": "Kano",
+    "price": 42000,
+    "unit": "100kg bag",
+    "source": "seed",
+    "reported_at": "2026-10-07"
+  },
+  {
+    "commodity": "maize",
+    "market_name": "Bodija",
+    "state": "Oyo",
+    "price": 45000,
+    "unit": "100kg bag",
+    "source": "seed",
+    "reported_at": "2026-10-08"
+  },
+  {
+    "commodity": "garri",
+    "market_name": "Oyingbo",
+    "state": "Lagos",
+    "price": 28000,
+    "unit": "50kg bag",
+    "source": "seed",
+    "reported_at": "2026-10-09"
+  },
+  {
+    "commodity": "garri",
+    "market_name": "Onitsha Main",
+    "state": "Anambra",
+    "price": 25000,
+    "unit": "50kg bag",
+    "source": "seed",
+    "reported_at": "2026-10-08"
+  },
+  {
+    "commodity": "yam",
+    "market_name": "Bodija",
+    "state": "Oyo",
+    "price": 3500,
+    "unit": "tuber",
+    "source": "seed",
+    "reported_at": "2026-10-09"
+  },
+  {
+    "commodity": "pepper",
+    "market_name": "Mile 12",
+    "state": "Lagos",
+    "price": 22000,
+    "unit": "basket",
+    "source": "seed",
+    "reported_at": "2026-10-09"
+  },
+  {
+    "commodity": "onion",
+    "market_name": "Dawanau",
+    "state": "Kano",
+    "price": 15000,
+    "unit": "bag",
+    "source": "seed",
+    "reported_at": "2026-10-07"
+  },
+  {
+    "commodity": "palm oil",
+    "market_name": "Oyingbo",
+    "state": "Lagos",
+    "price": 18000,
+    "unit": "25 litres",
+    "source": "seed",
+    "reported_at": "2026-10-09"
+  }
+]

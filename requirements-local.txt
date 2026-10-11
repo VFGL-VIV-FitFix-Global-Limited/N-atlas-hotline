@@ -1,0 +1,2 @@
+# Only if NATLAS_BACKEND=local (GPU workstation). Do not install on a laptop without LLVM.
+-r requirements.txt
