@@ -14,5 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+RUN python scripts/index_knowledge.py || true
+
 EXPOSE 8000
 CMD ["python", "scripts/run_server.py"]

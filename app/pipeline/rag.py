@@ -40,6 +40,15 @@ class RAGRetriever:
         with self._load_lock:
             if self._loaded:
                 return
+
+            from pathlib import Path
+
+            index_dir = Path(self._index_path)
+            if not index_dir.exists() or not any(index_dir.iterdir()):
+                logger.warning("faiss_index_missing_skipping_embedder", path=self._index_path)
+                self._loaded = True
+                return
+
             try:
                 from langchain_community.embeddings import HuggingFaceEmbeddings
                 from langchain_community.vectorstores import FAISS
