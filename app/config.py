@@ -43,14 +43,14 @@ class Settings(BaseSettings):
     )
 
     # Africa's Talking
-    at_username: str
-    at_api_key: str
-    at_phone_number: str
+    at_username: str = ""
+    at_api_key: str = ""
+    at_phone_number: str = ""
 
     # WhatsApp Cloud API
-    wa_phone_number_id: str
-    wa_access_token: str
-    wa_verify_token: str
+    wa_phone_number_id: str = ""
+    wa_access_token: str = ""
+    wa_verify_token: str = ""
     wa_app_secret: str = ""  # HMAC for X-Hub-Signature-256; empty = skip (dev only)
     wa_graph_version: str = "v21.0"
 
@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     twilio_whatsapp_number: str = "+14155238886"
 
     # App
-    app_base_url: str
+    app_base_url: str = "http://localhost:8000"
     database_path: str = "data/hotline.db"
     knowledge_path: str = "knowledge/"
     faiss_index_path: str = "data/faiss_index"
@@ -69,8 +69,8 @@ class Settings(BaseSettings):
     environment: Environment = Environment.DEVELOPMENT
 
     # Security
-    api_secret_key: str
-    phone_hash_salt: str
+    api_secret_key: str = "change-me-in-production"
+    phone_hash_salt: str = "dev-salt-16chars"
 
     # Rate limiting
     rate_limit_calls_per_minute: int = 10

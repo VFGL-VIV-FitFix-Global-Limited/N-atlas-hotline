@@ -12,6 +12,7 @@ from app.services.session import SessionStore
 # Module-level singletons — set during lifespan startup
 _db: Database | None = None
 _orchestrator: PipelineOrchestrator | None = None
+_http_client = None
 
 
 @lru_cache
@@ -20,12 +21,14 @@ def get_settings() -> Settings:
 
 
 async def get_db() -> Database:
-    assert _db is not None, "Database not initialized — check lifespan"
+    if _db is None:
+        raise HTTPException(status_code=503, detail="Service is still starting")
     return _db
 
 
 async def get_orchestrator() -> PipelineOrchestrator:
-    assert _orchestrator is not None, "Orchestrator not initialized — check lifespan"
+    if _orchestrator is None:
+        raise HTTPException(status_code=503, detail="Service is still starting")
     return _orchestrator
 
 
