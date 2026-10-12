@@ -54,6 +54,11 @@ class Settings(BaseSettings):
     wa_app_secret: str = ""  # HMAC for X-Hub-Signature-256; empty = skip (dev only)
     wa_graph_version: str = "v21.0"
 
+    # Twilio WhatsApp Sandbox
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
+    twilio_whatsapp_number: str = "+14155238886"
+
     # App
     app_base_url: str
     database_path: str = "data/hotline.db"

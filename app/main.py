@@ -14,6 +14,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app import dependencies
 from app.channels.phone import router as phone_router
+from app.channels.twilio_whatsapp import router as twilio_router
 from app.channels.whatsapp import router as whatsapp_router
 from app.config import Settings
 from app.dependencies import get_db, get_settings, verify_api_key
@@ -114,6 +115,7 @@ register_error_handlers(app)
 # Routers
 app.include_router(phone_router)
 app.include_router(whatsapp_router)
+app.include_router(twilio_router)
 
 
 # --- Health & Stats ---
