@@ -96,7 +96,7 @@ class NatlasLLM:
             lambda exc: isinstance(exc, httpx.TimeoutException)
             or (isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code >= 500)
         ),
-        before_sleep=before_sleep_log(logger, "WARNING"),
+        before_sleep=before_sleep_log(logger, 30),
     )
     async def generate(
         self,

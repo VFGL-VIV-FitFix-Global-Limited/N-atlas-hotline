@@ -317,20 +317,12 @@ async def _process_voice_note(
         )
         tmp_audio_path = None
 
+        # Text only — sandbox 429s if we also send the TTS audio as a second message.
         await _send_twilio_message(
             to=f"whatsapp:{phone_number}",
             body=result.response_text,
             settings=settings,
         )
-
-        if result.response_audio_path:
-            audio_url = f"{settings.app_base_url}/audio/{Path(result.response_audio_path).name}"
-            await _send_twilio_message(
-                to=f"whatsapp:{phone_number}",
-                body="🔊 Listen to the response:",
-                media_url=audio_url,
-                settings=settings,
-            )
 
         log.info(
             "voice_note_processed",
@@ -376,12 +368,26 @@ async def _send_twilio_message(
         data["MediaUrl"] = media_url
 
     async with httpx.AsyncClient(timeout=15.0) as client:
-        response = await client.post(
-            url,
-            data=data,
-            auth=(settings.twilio_account_sid, settings.twilio_auth_token),
-        )
-        response.raise_for_status()
+        last_error: Exception | None = None
+        for attempt in range(6):
+            response = await client.post(
+                url,
+                data=data,
+                auth=(settings.twilio_account_sid, settings.twilio_auth_token),
+            )
+            if response.status_code == 429:
+                retry_after = float(response.headers.get("Retry-After") or 20)
+                logger.warning("twilio_rate_limited", attempt=attempt + 1, retry_after=retry_after)
+                await asyncio.sleep(min(retry_after, 45))
+                last_error = httpx.HTTPStatusError(
+                    "429 Too Many Requests", request=response.request, response=response
+                )
+                continue
+            response.raise_for_status()
+            last_error = None
+            break
+        if last_error:
+            raise last_error
 
     suffix = to[-4:] if len(to) >= 4 else to
     logger.info("twilio_message_sent", to=suffix, body_length=len(body))
