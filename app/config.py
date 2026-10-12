@@ -87,8 +87,8 @@ class Settings(BaseSettings):
     max_response_words: int = 150
     max_call_duration_seconds: int = 180
     max_recording_seconds: int = 30
-    asr_timeout_seconds: int = 60
-    llm_timeout_seconds: int = 60
+    asr_timeout_seconds: int = 180
+    llm_timeout_seconds: int = 180
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "populate_by_name": True}
 

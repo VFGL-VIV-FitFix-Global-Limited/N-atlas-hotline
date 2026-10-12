@@ -11,6 +11,7 @@ Key differences from Meta WhatsApp Cloud API (whatsapp.py):
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import os
@@ -258,13 +259,37 @@ async def _process_voice_note(
 
         log.info("downloading_voice_note", media_type=media_content_type)
 
+        response: httpx.Response | None = None
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(
-                media_url,
-                auth=(settings.twilio_account_sid, settings.twilio_auth_token),
-                follow_redirects=True,
-            )
-            response.raise_for_status()
+            last_error: Exception | None = None
+            for attempt in range(5):
+                try:
+                    response = await client.get(
+                        media_url,
+                        auth=(settings.twilio_account_sid, settings.twilio_auth_token),
+                        follow_redirects=True,
+                    )
+                    if response.status_code in {404, 409, 425}:
+                        log.warning(
+                            "twilio_media_not_ready",
+                            status=response.status_code,
+                            attempt=attempt + 1,
+                        )
+                        await asyncio.sleep(1.5)
+                        continue
+                    response.raise_for_status()
+                    last_error = None
+                    break
+                except httpx.HTTPStatusError as e:
+                    last_error = e
+                    if e.response.status_code >= 500:
+                        await asyncio.sleep(1.5)
+                        continue
+                    raise
+            if response is None or last_error is not None or response.status_code >= 400:
+                if last_error:
+                    raise last_error
+                response.raise_for_status()  # type: ignore[union-attr]
 
         ext_map = {
             "audio/ogg": ".ogg",
