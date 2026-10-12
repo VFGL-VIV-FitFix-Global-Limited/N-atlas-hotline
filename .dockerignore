@@ -1,0 +1,17 @@
+.venv/
+.git/
+__pycache__/
+*.pyc
+*.pyo
+data/
+htmlcov/
+.coverage
+.env
+.pytest_cache/
+tests/
+docs/
+*.md
+start.sh
+requirements-dev.txt
+requirements-local.txt
+docker-compose.yml

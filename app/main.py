@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncGenerator
 
 import httpx
 import structlog
-from pathlib import Path
-
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from slowapi.errors import RateLimitExceeded
@@ -33,7 +33,6 @@ from app.pipeline.tts import GoogleTTS
 
 
 def configure_logging(log_level: str) -> None:
-    """Configure structlog for JSON-formatted structured logging."""
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,
@@ -58,49 +57,46 @@ def configure_logging(log_level: str) -> None:
 
 
 async def _boot_pipeline() -> None:
-    """Heavy init after the socket is open so /health is never blocked."""
-    settings = get_settings()
-    configure_logging(settings.log_level)
-    logger = structlog.get_logger(__name__)
-    logger.info("starting_up", environment=settings.environment.value)
+    try:
+        print("[boot] pipeline init starting", flush=True)
+        settings = get_settings()
+        configure_logging(settings.log_level)
 
-    db = Database(settings.database_path)
-    await db.connect()
-    http_client = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
-    asr = build_asr(http_client, settings)
-    intent = IntentClassifier()
-    rag = RAGRetriever(settings.faiss_index_path, settings.rag_confidence_threshold, db=db)
-    llm = build_llm(http_client, settings)
-    tts = GoogleTTS(settings.audio_dir)
-    orchestrator = PipelineOrchestrator(asr, intent, rag, llm, tts, db, settings)
+        db = Database(settings.database_path)
+        await db.connect()
+        http_client = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
+        asr = build_asr(http_client, settings)
+        intent = IntentClassifier()
+        rag = RAGRetriever(settings.faiss_index_path, settings.rag_confidence_threshold, db=db)
+        llm = build_llm(http_client, settings)
+        tts = GoogleTTS(settings.audio_dir)
+        orchestrator = PipelineOrchestrator(asr, intent, rag, llm, tts, db, settings)
 
-    dependencies._db = db
-    dependencies._http_client = http_client
-    dependencies._orchestrator = orchestrator
-    logger.info(
-        "startup_complete",
-        natlas_backend=settings.natlas_backend,
-        natlas_model=settings.natlas_model,
-        source=LLM_HF_URL,
-    )
-    await rag.warmup()
+        dependencies._db = db
+        dependencies._http_client = http_client
+        dependencies._orchestrator = orchestrator
+        print(f"[boot] pipeline ready  backend={settings.natlas_backend}", flush=True)
+        await rag.warmup()
+        print("[boot] rag warmup done", flush=True)
+    except Exception as exc:
+        print(f"[boot] PIPELINE INIT FAILED: {exc}", file=sys.stderr, flush=True)
+        import traceback
+        traceback.print_exc()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Yield immediately so Uvicorn binds PORT; pipeline boots in the background."""
+    print("[lifespan] yielding immediately", flush=True)
     boot = asyncio.create_task(_boot_pipeline())
     yield
+    print("[lifespan] shutting down", flush=True)
     boot.cancel()
-    logger = structlog.get_logger(__name__)
-    logger.info("shutting_down")
     http_client = getattr(dependencies, "_http_client", None)
     if http_client is not None:
         await http_client.aclose()
     db = dependencies._db
     if db is not None:
         await db.disconnect()
-    logger.info("shutdown_complete")
 
 
 app = FastAPI(
@@ -110,23 +106,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Middleware
 app.add_middleware(RequestIDMiddleware)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 register_error_handlers(app)
 
-# Routers
 app.include_router(phone_router)
 app.include_router(whatsapp_router)
 app.include_router(twilio_router)
 
 
-# --- Health & Stats ---
-
 @app.get("/health")
 async def health() -> dict:
-    """No dependencies — must work even while the pipeline is still booting."""
     return {
         "status": "ok",
         "version": "1.0.0",
@@ -137,7 +128,6 @@ async def health() -> dict:
 
 @app.get("/audio/{filename}")
 async def serve_audio(filename: str, settings: Settings = Depends(get_settings)) -> FileResponse:
-    """Public URL for Africa's Talking <Play> and WhatsApp audio.link."""
     safe = Path(filename).name
     if safe != filename or ".." in filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
