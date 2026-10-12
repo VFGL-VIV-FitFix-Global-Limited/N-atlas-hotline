@@ -1,137 +1,359 @@
-[
-  {
-    "commodity": "rice",
-    "market_name": "Mile 12",
-    "state": "Lagos",
-    "price": 85000,
-    "unit": "50kg bag",
-    "source": "seed",
-    "reported_at": "2026-10-08"
+{
+  "metadata": {
+    "description": "Seed market prices for major Nigerian commodities across key markets. Prices are approximate and vary by season, quality, and market conditions. This data serves as initial seed data for the N-ATLAS Hotline RAG pipeline.",
+    "currency": "NGN",
+    "unit_note": "Prices are per unit as specified (per kg, per bag, per basket, per piece). Bag sizes vary by commodity.",
+    "last_updated": "2025-01-01",
+    "update_frequency": "Weekly updates recommended from field agents or market surveys",
+    "disclaimer": "Prices are approximate seed data. Real-time prices should be collected from market surveys, FMARD, NBS, or state commodity boards."
   },
-  {
-    "commodity": "rice",
-    "market_name": "Bodija",
-    "state": "Oyo",
-    "price": 82000,
-    "unit": "50kg bag",
-    "source": "seed",
-    "reported_at": "2026-10-08"
-  },
-  {
-    "commodity": "rice",
-    "market_name": "Dawanau",
-    "state": "Kano",
-    "price": 78000,
-    "unit": "50kg bag",
-    "source": "seed",
-    "reported_at": "2026-10-07"
-  },
-  {
-    "commodity": "beans",
-    "market_name": "Mile 12",
-    "state": "Lagos",
-    "price": 95000,
-    "unit": "100kg bag",
-    "source": "seed",
-    "reported_at": "2026-10-08"
-  },
-  {
-    "commodity": "beans",
-    "market_name": "Bodija",
-    "state": "Oyo",
-    "price": 90000,
-    "unit": "100kg bag",
-    "source": "seed",
-    "reported_at": "2026-10-08"
-  },
-  {
-    "commodity": "tomato",
-    "market_name": "Mile 12",
-    "state": "Lagos",
-    "price": 18000,
-    "unit": "basket",
-    "source": "seed",
-    "reported_at": "2026-10-09"
-  },
-  {
-    "commodity": "tomato",
-    "market_name": "Giwa",
-    "state": "Kaduna",
-    "price": 8500,
-    "unit": "basket",
-    "source": "seed",
-    "reported_at": "2026-10-08"
-  },
-  {
-    "commodity": "maize",
-    "market_name": "Dawanau",
-    "state": "Kano",
-    "price": 42000,
-    "unit": "100kg bag",
-    "source": "seed",
-    "reported_at": "2026-10-07"
-  },
-  {
-    "commodity": "maize",
-    "market_name": "Bodija",
-    "state": "Oyo",
-    "price": 45000,
-    "unit": "100kg bag",
-    "source": "seed",
-    "reported_at": "2026-10-08"
-  },
-  {
-    "commodity": "garri",
-    "market_name": "Oyingbo",
-    "state": "Lagos",
-    "price": 28000,
-    "unit": "50kg bag",
-    "source": "seed",
-    "reported_at": "2026-10-09"
-  },
-  {
-    "commodity": "garri",
-    "market_name": "Onitsha Main",
-    "state": "Anambra",
-    "price": 25000,
-    "unit": "50kg bag",
-    "source": "seed",
-    "reported_at": "2026-10-08"
-  },
-  {
-    "commodity": "yam",
-    "market_name": "Bodija",
-    "state": "Oyo",
-    "price": 3500,
-    "unit": "tuber",
-    "source": "seed",
-    "reported_at": "2026-10-09"
-  },
-  {
-    "commodity": "pepper",
-    "market_name": "Mile 12",
-    "state": "Lagos",
-    "price": 22000,
-    "unit": "basket",
-    "source": "seed",
-    "reported_at": "2026-10-09"
-  },
-  {
-    "commodity": "onion",
-    "market_name": "Dawanau",
-    "state": "Kano",
-    "price": 15000,
-    "unit": "bag",
-    "source": "seed",
-    "reported_at": "2026-10-07"
-  },
-  {
-    "commodity": "palm oil",
-    "market_name": "Oyingbo",
-    "state": "Lagos",
-    "price": 18000,
-    "unit": "25 litres",
-    "source": "seed",
-    "reported_at": "2026-10-09"
-  }
-]
+  "markets": [
+    {
+      "name": "Mile 12 Market",
+      "location": "Lagos",
+      "state": "Lagos",
+      "zone": "Southwest",
+      "type": "wholesale",
+      "description": "Largest foodstuff market in Lagos and one of the biggest in West Africa"
+    },
+    {
+      "name": "Bodija Market",
+      "location": "Ibadan",
+      "state": "Oyo",
+      "zone": "Southwest",
+      "type": "wholesale",
+      "description": "Major foodstuff market in Ibadan"
+    },
+    {
+      "name": "Dawanau Market",
+      "location": "Kano",
+      "state": "Kano",
+      "zone": "Northwest",
+      "type": "wholesale",
+      "description": "Largest grain market in Africa"
+    },
+    {
+      "name": "Benue Yam Market",
+      "location": "Makurdi",
+      "state": "Benue",
+      "zone": "North Central",
+      "type": "wholesale",
+      "description": "Major yam trading hub, Benue is Nigeria's food basket"
+    },
+    {
+      "name": "Ogbete Market",
+      "location": "Enugu",
+      "state": "Enugu",
+      "zone": "Southeast",
+      "type": "wholesale",
+      "description": "Largest market in the southeast"
+    },
+    {
+      "name": "Wuse Market",
+      "location": "Abuja",
+      "state": "FCT",
+      "zone": "North Central",
+      "type": "retail",
+      "description": "Major market in the Federal Capital Territory"
+    },
+    {
+      "name": "Ose Market",
+      "location": "Onitsha",
+      "state": "Anambra",
+      "zone": "Southeast",
+      "type": "wholesale",
+      "description": "One of the largest markets in West Africa"
+    },
+    {
+      "name": "Kasuwan Barci",
+      "location": "Jos",
+      "state": "Plateau",
+      "zone": "North Central",
+      "type": "wholesale",
+      "description": "Major market in Jos, known for Irish potatoes and vegetables"
+    }
+  ],
+  "commodities": [
+    {
+      "name": "Rice (Local)",
+      "category": "grains",
+      "unit": "50kg bag",
+      "prices": [
+        {"market": "Mile 12 Market", "price_min": 42000, "price_max": 55000},
+        {"market": "Bodija Market", "price_min": 40000, "price_max": 52000},
+        {"market": "Dawanau Market", "price_min": 35000, "price_max": 48000},
+        {"market": "Ogbete Market", "price_min": 43000, "price_max": 55000},
+        {"market": "Wuse Market", "price_min": 45000, "price_max": 58000}
+      ],
+      "season_note": "Prices lowest during harvest (October-January), highest June-September"
+    },
+    {
+      "name": "Rice (Imported)",
+      "category": "grains",
+      "unit": "50kg bag",
+      "prices": [
+        {"market": "Mile 12 Market", "price_min": 55000, "price_max": 75000},
+        {"market": "Bodija Market", "price_min": 53000, "price_max": 72000},
+        {"market": "Dawanau Market", "price_min": 50000, "price_max": 68000},
+        {"market": "Ogbete Market", "price_min": 55000, "price_max": 73000},
+        {"market": "Wuse Market", "price_min": 58000, "price_max": 78000}
+      ],
+      "season_note": "Prices influenced by import policies and exchange rate"
+    },
+    {
+      "name": "Maize (Yellow)",
+      "category": "grains",
+      "unit": "100kg bag",
+      "prices": [
+        {"market": "Mile 12 Market", "price_min": 30000, "price_max": 45000},
+        {"market": "Bodija Market", "price_min": 28000, "price_max": 42000},
+        {"market": "Dawanau Market", "price_min": 22000, "price_max": 35000},
+        {"market": "Ogbete Market", "price_min": 30000, "price_max": 44000},
+        {"market": "Wuse Market", "price_min": 32000, "price_max": 48000}
+      ],
+      "season_note": "Cheapest after harvest (September-November), most expensive May-August"
+    },
+    {
+      "name": "Maize (White)",
+      "category": "grains",
+      "unit": "100kg bag",
+      "prices": [
+        {"market": "Mile 12 Market", "price_min": 28000, "price_max": 42000},
+        {"market": "Bodija Market", "price_min": 26000, "price_max": 40000},
+        {"market": "Dawanau Market", "price_min": 20000, "price_max": 33000},
+        {"market": "Ogbete Market", "price_min": 28000, "price_max": 43000},
+        {"market": "Wuse Market", "price_min": 30000, "price_max": 45000}
+      ],
+      "season_note": "Same seasonal pattern as yellow maize"
+    },
+    {
+      "name": "Beans (Brown/Honey)",
+      "category": "grains",
+      "unit": "100kg bag",
+      "prices": [
+        {"market": "Mile 12 Market", "price_min": 80000, "price_max": 130000},
+        {"market": "Bodija Market", "price_min": 75000, "price_max": 125000},
+        {"market": "Dawanau Market", "price_min": 65000, "price_max": 110000},
+        {"market": "Ogbete Market", "price_min": 80000, "price_max": 128000},
+        {"market": "Wuse Market", "price_min": 85000, "price_max": 135000}
+      ],
+      "season_note": "Cheapest October-December after harvest, most expensive June-September"
+    },
+    {
+      "name": "Beans (White)",
+      "category": "grains",
+      "unit": "100kg bag",
+      "prices": [
+        {"market": "Mile 12 Market", "price_min": 85000, "price_max": 140000},
+        {"market": "Bodija Market", "price_min": 80000, "price_max": 135000},
+        {"market": "Dawanau Market", "price_min": 70000, "price_max": 120000},
+        {"market": "Ogbete Market", "price_min": 85000, "price_max": 138000},
+        {"market": "Wuse Market", "price_min": 90000, "price_max": 145000}
+      ],
+      "season_note": "White beans typically slightly more expensive than brown"
+    },
+    {
+      "name": "Garri (White)",
+      "category": "processed",
+      "unit": "50kg bag",
+      "prices": [
+        {"market": "Mile 12 Market", "price_min": 18000, "price_max": 35000},
+        {"market": "Bodija Market", "price_min": 16000, "price_max": 32000},
+        {"market": "Dawanau Market", "price_min": 20000, "price_max": 38000},
+        {"market": "Ogbete Market", "price_min": 17000, "price_max": 33000},
+        {"market": "Wuse Market", "price_min": 20000, "price_max": 38000}
+      ],
+      "season_note": "Cheapest during cassava harvest (October-February), expensive during planting season"
+    },
+    {
+      "name": "Garri (Yellow/Ijebu)",
+      "category": "processed",
+      "unit": "50kg bag",
+      "prices": [
+        {"market": "Mile 12 Market", "price_min": 22000, "price_max": 42000},
+        {"market": "Bodija Market", "price_min": 20000, "price_max": 38000},
+        {"market": "Ogbete Market", "price_min": 22000, "price_max": 40000},
+        {"market": "Wuse Market", "price_min": 25000, "price_max": 45000}
+      ],
+      "season_note": "Yellow garri is typically more expensive than white"
+    },
+    {
+      "name": "Yam (White)",
+      "category": "tubers",
+      "unit": "piece (medium tuber ~2-3kg)",
+      "prices": [
+        {"market": "Mile 12 Market", "price_min": 800, "price_max": 2500},
+        {"market": "Bodija Market", "price_min": 600, "price_max": 2000},
+        {"market": "Benue Yam Market", "price_min": 400, "price_max": 1200},
+        {"market": "Ogbete Market", "price_min": 700, "price_max": 2200},
+        {"market": "Wuse Market", "price_min": 900, "price_max": 2800}
+      ],
+      "season_note": "Cheapest during new yam season (August-November), most expensive April-July"
+    },
+    {
+      "name": "Tomato (Fresh)",
+      "category": "vegetables",
+      "unit": "big basket (~50kg)",
+      "prices": [
+        {"market": "Mile 12 Market", "price_min": 15000, "price_max": 80000},
+        {"market": "Bodija Market", "price_min": 12000, "price_max": 75000},
+        {"market": "Kasuwan Barci", "price_min": 10000, "price_max": 60000},
+        {"market": "Wuse Market", "price_min": 18000, "price_max": 90000}
+      ],
+      "season_note": "Extreme price swings. Cheapest January-March (dry season harvest), most expensive June-September (rainy season scarcity)"
+    },
+    {
+      "name": "Pepper (Rodo/Scotch Bonnet)",
+      "category": "vegetables",
+      "unit": "big basket (~25kg)",
+      "prices": [
+        {"market": "Mile 12 Market", "price_min": 12000, "price_max": 60000},
+        {"market": "Bodija Market", "price_min": 10000, "price_max": 55000},
+        {"market": "Ogbete Market", "price_min": 12000, "price_max": 58000},
+        {"market": "Wuse Market", "price_min": 15000, "price_max": 65000}
+      ],
+      "season_note": "Similar to tomato — cheapest in dry season, most expensive in rainy season"
+    },
+    {
+      "name": "Onion (Red)",
+      "category": "vegetables",
+      "unit": "50kg bag",
+      "prices": [
+        {"market": "Mile 12 Market", "price_min": 25000, "price_max": 60000},
+        {"market": "Bodija Market", "price_min": 22000, "price_max": 55000},
+        {"market": "Dawanau Market", "price_min": 15000, "price_max": 40000},
+        {"market": "Wuse Market", "price_min": 28000, "price_max": 65000}
+      ],
+      "season_note": "Cheapest January-March (harvest in the north), expensive during rainy season"
+    },
+    {
+      "name": "Palm Oil",
+      "category": "oils",
+      "unit": "25 litres (1 jerry can)",
+      "prices": [
+        {"market": "Mile 12 Market", "price_min": 25000, "price_max": 40000},
+        {"market": "Bodija Market", "price_min": 23000, "price_max": 38000},
+        {"market": "Ogbete Market", "price_min": 20000, "price_max": 35000},
+        {"market": "Ose Market", "price_min": 19000, "price_max": 33000},
+        {"market": "Wuse Market", "price_min": 28000, "price_max": 45000}
+      ],
+      "season_note": "Cheapest during peak production (February-May), expensive September-January"
+    },
+    {
+      "name": "Groundnut Oil",
+      "category": "oils",
+      "unit": "25 litres (1 jerry can)",
+      "prices": [
+        {"market": "Mile 12 Market", "price_min": 30000, "price_max": 50000},
+        {"market": "Dawanau Market", "price_min": 25000, "price_max": 42000},
+        {"market": "Wuse Market", "price_min": 33000, "price_max": 55000}
+      ],
+      "season_note": "Cheapest after groundnut harvest (October-December)"
+    },
+    {
+      "name": "Catfish (Fresh/Live)",
+      "category": "protein",
+      "unit": "per kg",
+      "prices": [
+        {"market": "Mile 12 Market", "price_min": 1800, "price_max": 3000},
+        {"market": "Bodija Market", "price_min": 1500, "price_max": 2800},
+        {"market": "Ogbete Market", "price_min": 1600, "price_max": 2800},
+        {"market": "Wuse Market", "price_min": 2000, "price_max": 3500}
+      ],
+      "season_note": "Relatively stable, slight increase during festive periods"
+    },
+    {
+      "name": "Chicken (Broiler, Live)",
+      "category": "protein",
+      "unit": "per bird (~2kg)",
+      "prices": [
+        {"market": "Mile 12 Market", "price_min": 3500, "price_max": 6000},
+        {"market": "Bodija Market", "price_min": 3000, "price_max": 5500},
+        {"market": "Dawanau Market", "price_min": 2500, "price_max": 5000},
+        {"market": "Ogbete Market", "price_min": 3500, "price_max": 5800},
+        {"market": "Wuse Market", "price_min": 4000, "price_max": 7000}
+      ],
+      "season_note": "Peak prices during December (Christmas) and Easter"
+    },
+    {
+      "name": "Eggs",
+      "category": "protein",
+      "unit": "crate (30 eggs)",
+      "prices": [
+        {"market": "Mile 12 Market", "price_min": 2200, "price_max": 3500},
+        {"market": "Bodija Market", "price_min": 2000, "price_max": 3200},
+        {"market": "Dawanau Market", "price_min": 1800, "price_max": 3000},
+        {"market": "Ogbete Market", "price_min": 2200, "price_max": 3400},
+        {"market": "Wuse Market", "price_min": 2500, "price_max": 3800}
+      ],
+      "season_note": "Prices increase during hot season (reduced laying) and festive periods"
+    },
+    {
+      "name": "Sorghum (Guinea Corn)",
+      "category": "grains",
+      "unit": "100kg bag",
+      "prices": [
+        {"market": "Dawanau Market", "price_min": 20000, "price_max": 35000},
+        {"market": "Bodija Market", "price_min": 25000, "price_max": 40000},
+        {"market": "Wuse Market", "price_min": 28000, "price_max": 42000}
+      ],
+      "season_note": "Cheapest October-December (harvest), expensive during planting season"
+    },
+    {
+      "name": "Millet",
+      "category": "grains",
+      "unit": "100kg bag",
+      "prices": [
+        {"market": "Dawanau Market", "price_min": 22000, "price_max": 38000},
+        {"market": "Wuse Market", "price_min": 30000, "price_max": 48000}
+      ],
+      "season_note": "Mainly consumed in the north, cheapest after harvest"
+    },
+    {
+      "name": "Cassava Tubers (Fresh)",
+      "category": "tubers",
+      "unit": "per tonne",
+      "prices": [
+        {"market": "Bodija Market", "price_min": 30000, "price_max": 60000},
+        {"market": "Benue Yam Market", "price_min": 25000, "price_max": 50000},
+        {"market": "Ogbete Market", "price_min": 30000, "price_max": 55000}
+      ],
+      "season_note": "Stable year-round as cassava can be harvested anytime. Slight price increase during planting season."
+    },
+    {
+      "name": "Groundnut (Shelled)",
+      "category": "grains",
+      "unit": "100kg bag",
+      "prices": [
+        {"market": "Dawanau Market", "price_min": 50000, "price_max": 85000},
+        {"market": "Bodija Market", "price_min": 60000, "price_max": 95000},
+        {"market": "Wuse Market", "price_min": 65000, "price_max": 100000}
+      ],
+      "season_note": "Cheapest October-December (harvest), expensive during planting and rainy season"
+    },
+    {
+      "name": "Plantain",
+      "category": "tubers",
+      "unit": "bunch (medium, ~10-15kg)",
+      "prices": [
+        {"market": "Mile 12 Market", "price_min": 2000, "price_max": 6000},
+        {"market": "Bodija Market", "price_min": 1500, "price_max": 5000},
+        {"market": "Ogbete Market", "price_min": 1800, "price_max": 5500},
+        {"market": "Wuse Market", "price_min": 2500, "price_max": 7000}
+      ],
+      "season_note": "Cheapest during glut season (August-October), expensive in dry season"
+    },
+    {
+      "name": "Soybeans",
+      "category": "grains",
+      "unit": "100kg bag",
+      "prices": [
+        {"market": "Dawanau Market", "price_min": 35000, "price_max": 55000},
+        {"market": "Bodija Market", "price_min": 40000, "price_max": 60000},
+        {"market": "Benue Yam Market", "price_min": 30000, "price_max": 50000},
+        {"market": "Wuse Market", "price_min": 42000, "price_max": 65000}
+      ],
+      "season_note": "Growing demand from poultry feed industry. Cheapest after harvest (October-December)."
+    }
+  ]
+}

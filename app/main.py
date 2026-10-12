@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
@@ -90,10 +91,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         natlas_model=settings.natlas_model,
         source=LLM_HF_URL,
     )
+    # Do not await MiniLM here — uvicorn only binds the port after lifespan yields.
+    rag_warmup = asyncio.create_task(rag.warmup())
     yield
 
     # Shutdown
     logger.info("shutting_down")
+    rag_warmup.cancel()
     await http_client.aclose()
     await db.disconnect()
     logger.info("shutdown_complete")

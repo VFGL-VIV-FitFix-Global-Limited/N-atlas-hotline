@@ -1,47 +1,72 @@
----
-domain: government
-topic: jamb_registration
-title: How to Register for JAMB (UTME)
-source: jamb.gov.ng
-last_updated: 2026-10-09
-language: english
----
+# JAMB UTME Registration Guide
 
-# How to Register for JAMB (UTME)
+## What is JAMB UTME?
 
-The Joint Admissions and Matriculation Board (JAMB) conducts the Unified Tertiary Matriculation Examination (UTME) for students seeking admission into Nigerian universities, polytechnics and colleges of education.
+The Joint Admissions and Matriculation Board (JAMB) conducts the Unified Tertiary Matriculation Examination (UTME) every year. It is the entrance exam for admission into Nigerian universities, polytechnics, and colleges of education. If you want to study in any Nigerian higher institution, you must write JAMB.
 
-## How to Register
+## Who Can Register?
 
-1. Obtain a JAMB registration profile by sending your NIN to 55019 via SMS from your registered phone number.
-2. Visit any JAMB-accredited Computer Based Test (CBT) centre.
-3. Pay the registration fee (₦4,700 for UTME as of 2026).
-4. Create your JAMB profile at the CBT centre.
-5. Fill in your personal details, choice of institutions (up to 4) and preferred subjects.
-6. Your biometrics and photograph will be captured.
-7. Print your registration slip — keep it safe.
+- Nigerian citizens or residents
+- You must have a valid NIN (National Identification Number) — this is mandatory
+- You should generally be at least 16 years old by September 30 of the exam year
+- You need at least 5 O'Level credits (or be awaiting results)
 
-## Required Documents
+## Documents and Requirements
 
-- NIN (National Identification Number) — mandatory
-- Valid email address
-- Phone number registered with NIN
-- O'Level results (WAEC/NECO) or awaiting results
+- Valid NIN — you cannot register without it
+- Active phone number linked to your NIN
+- Active email address
+- JAMB profile code (created by sending your NIN to 55019 or 66019 via SMS)
+- O'Level results (WAEC, NECO, or NABTEB) — can be uploaded later but must be available before admission
+- Passport photograph (clear, white background)
 
-## UTME Exam Tips
+## Registration Fees (2026)
 
-- The exam is computer-based and lasts 2 hours.
-- You will answer 60 questions in Use of English (compulsory) and 40 questions each in 3 other subjects.
-- Total score is 400 marks.
-- Results are released within 2 weeks of the exam.
+- UTME without mock exam: ₦7,200
+- UTME with mock exam: ₦8,700
+- Direct Entry: ₦5,700
 
-## Checking Results
+The UTME fee includes: ₦3,500 JAMB application fee, ₦1,000 reading text, ₦700 CBT centre registration, ₦1,500 CBT service charge, and ₦500 bank charges.
 
-- Visit www.jamb.gov.ng and log into your profile.
-- Or send RESULT to 55019 via SMS.
+## How to Register (Step by Step)
 
-## Contact JAMB
+1. Get your NIN ready. If you don't have one, register at any NIMC centre first.
+2. Create your JAMB profile by sending your NIN as an SMS to 55019 or 66019. You will receive a profile code.
+3. Buy your JAMB e-PIN at any approved bank (such as any commercial bank) or JAMB-authorised vendor. You need your profile code to buy.
+4. Go to a JAMB-accredited CBT (Computer-Based Test) centre near you. You cannot complete registration online at home — you must go to an accredited centre.
+5. At the centre, the operator will enter your details, capture your biometrics, and help you choose your subjects and preferred institutions.
+6. Choose 4 UTME subjects relevant to your course of study. English is compulsory for all candidates.
+7. Select up to 4 institutions and courses in order of preference.
+8. Review all your details carefully before submitting.
+9. Print your registration slip and examination notification slip. Keep them safe.
 
-- Website: www.jamb.gov.ng
-- Helpline: 09-8788820
-- Email: enquiries@jamb.gov.ng
+## Key Dates (2026)
+
+- e-PIN sales: January 2026
+- Registration period: Late January to late February 2026
+- Mock UTME: March 2026 (optional)
+- Main UTME: April 2026
+- Results: Usually released within 2 weeks of the exam
+
+Note: Dates may change from year to year. Always check jamb.gov.ng for the current year's schedule.
+
+## How to Check Your JAMB Result
+
+- Visit jamb.gov.ng
+- Go to the UTME results page
+- Enter your registration number
+- Your score will be displayed
+
+## Important Tips
+
+- Make sure your name and date of birth on your NIN match your O'Level certificates. Mismatches cause rejection.
+- Register early to get your preferred exam centre.
+- The reading text is a novel. Check the official JAMB website for the current novel title.
+- Do not share your profile code or e-PIN with anyone.
+- Beware of fraudsters selling "expo" or "special centres." These are scams.
+
+## JAMB Contact
+
+JAMB Helpline: 09062626364
+Website: jamb.gov.ng
+Email: info@jamb.gov.ng
