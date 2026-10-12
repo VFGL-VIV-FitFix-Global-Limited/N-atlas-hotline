@@ -27,10 +27,10 @@ def natlas_v1_url(base: str, path: str) -> str:
 
 
 class Settings(BaseSettings):
-    # gateway (default) = hosted HTTP API — use this on Railway/Render
-    # huggingface = HF Inference API
+    # huggingface (default) = Hugging Face Inference API — use this on Railway
+    # gateway = hosted OpenAI-compatible HTTP API
     # local = from_pretrained (GPU only; not for production)
-    natlas_backend: str = "gateway"
+    natlas_backend: str = "huggingface"
     natlas_device: str = "auto"
     hf_token: str = ""
     natlas_base_url: str = ""
@@ -81,8 +81,8 @@ class Settings(BaseSettings):
     max_response_words: int = 150
     max_call_duration_seconds: int = 180
     max_recording_seconds: int = 30
-    asr_timeout_seconds: int = 10
-    llm_timeout_seconds: int = 15
+    asr_timeout_seconds: int = 60
+    llm_timeout_seconds: int = 60
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "populate_by_name": True}
 

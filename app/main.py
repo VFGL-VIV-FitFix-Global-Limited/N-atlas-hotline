@@ -75,7 +75,13 @@ async def _boot_pipeline() -> None:
         dependencies._db = db
         dependencies._http_client = http_client
         dependencies._orchestrator = orchestrator
-        print(f"[boot] pipeline ready  backend={settings.natlas_backend}", flush=True)
+        token_ok = bool(settings.hf_token) if settings.natlas_backend in {"huggingface", "local"} else True
+        print(
+            f"[boot] pipeline ready  backend={settings.natlas_backend}  hf_token={'set' if token_ok else 'MISSING'}",
+            flush=True,
+        )
+        if settings.natlas_backend in {"huggingface", "local"} and not settings.hf_token:
+            print("[boot] WARNING: HF_TOKEN is empty — ASR/LLM calls to Hugging Face will fail", flush=True)
         await rag.warmup()
         print("[boot] rag warmup done", flush=True)
     except Exception as exc:

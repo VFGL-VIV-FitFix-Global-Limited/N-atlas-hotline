@@ -22,6 +22,7 @@ from app.pipeline.hf_models import (
 )
 from app.pipeline.llm import FALLBACK_MESSAGES, GENERAL_PROMPT_TEMPLATE, LANGUAGE_NAMES, RAG_PROMPT_TEMPLATE, SENSITIVE_DOMAINS, SYSTEM_PROMPT
 from app.pipeline.natlas_lang import normalise_natlas_language
+from app.utils.audio import convert_to_wav
 
 logger = structlog.get_logger(__name__)
 
@@ -37,15 +38,21 @@ class HuggingFaceASR:
             raise ASRError(str(e), status_code=400) from e
 
         model_id = ASR_MODEL_IDS[lang]
+        wav_path = audio_path
+        if Path(audio_path).suffix.lower() != ".wav":
+            wav_path = await convert_to_wav(audio_path)
         from huggingface_hub import AsyncInferenceClient
 
         client = AsyncInferenceClient(token=self._config.hf_token or None, timeout=self._config.asr_timeout_seconds)
-        audio = Path(audio_path).read_bytes()
+        audio = Path(wav_path).read_bytes()
         try:
             result = await client.automatic_speech_recognition(audio, model=model_id)
         except Exception as e:
             logger.error("hf_asr_failed", model=model_id, error=str(e))
             raise ASRError(f"Hugging Face ASR failed ({model_id}): {e}") from e
+        finally:
+            if wav_path != audio_path:
+                Path(wav_path).unlink(missing_ok=True)
 
         text = result.get("text", "") if isinstance(result, dict) else getattr(result, "text", str(result))
         logger.info("hf_asr_success", language=lang, model=model_id, text_length=len(text))
