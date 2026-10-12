@@ -16,9 +16,11 @@ from app.models.schemas import Domain
 from app.pipeline.asr import ASRError
 from app.pipeline.hf_models import (
     ASR_MODEL_IDS,
+    ASR_SERVERLESS_MODEL,
     LLM_MAX_NEW_TOKENS,
     LLM_MODEL_ID,
     LLM_REPETITION_PENALTY,
+    LLM_SERVERLESS_MODEL,
     LLM_TEMPERATURE,
 )
 from app.pipeline.llm import (
@@ -36,7 +38,7 @@ logger = structlog.get_logger(__name__)
 
 _HF_INFERENCE_URLS = (
     "https://router.huggingface.co/hf-inference/models/{model}",
-    "https://api-inference.huggingface.co/models/{model}",
+    "https://router.huggingface.co/hf-inference/models/{model}/automatic-speech-recognition",
 )
 _HF_CHAT_URL = "https://router.huggingface.co/v1/chat/completions"
 
@@ -72,13 +74,17 @@ class HuggingFaceASR:
         except ValueError as e:
             raise ASRError(str(e), status_code=400) from e
 
-        model_id = ASR_MODEL_IDS[lang]
+        model_id = (
+            ASR_MODEL_IDS[lang]
+            if self._config.hf_asr_endpoint
+            else (self._config.hf_asr_model or ASR_SERVERLESS_MODEL)
+        )
         wav_path = audio_path
         try:
             if Path(audio_path).suffix.lower() != ".wav":
                 wav_path = await convert_to_wav(audio_path)
             audio = Path(wav_path).read_bytes()
-            text = await self._transcribe_bytes(audio, model_id)
+            text = await self._transcribe_bytes(audio, model_id, lang)
         except ASRError:
             raise
         except Exception as e:
@@ -91,14 +97,15 @@ class HuggingFaceASR:
         logger.info("hf_asr_success", language=lang, model=model_id, text_length=len(text))
         return text
 
-    async def _transcribe_bytes(self, audio: bytes, model_id: str) -> str:
+    async def _transcribe_bytes(self, audio: bytes, model_id: str, language: str) -> str:
         headers = {
             **_auth_headers(self._config.hf_token),
             "Content-Type": "audio/wav",
         }
+        logger.info("hf_asr_request", model=model_id, language=language, bytes=len(audio))
         last_error = "no Hugging Face ASR endpoint responded"
-        for template in _HF_INFERENCE_URLS:
-            url = template.format(model=model_id)
+        urls = self._asr_urls(model_id)
+        for url in urls:
             try:
                 response = await self._client.post(
                     url,
@@ -106,9 +113,9 @@ class HuggingFaceASR:
                     headers=headers,
                     timeout=self._config.asr_timeout_seconds,
                 )
-            except httpx.TimeoutException as e:
-                last_error = f"timeout talking to {url}"
-                logger.warning("hf_asr_timeout", url=url, error=str(e))
+            except httpx.RequestError as e:
+                last_error = f"{type(e).__name__} talking to {url}: {e}"
+                logger.warning("hf_asr_request_error", url=url, error=str(e))
                 continue
 
             if response.status_code == 503:
@@ -127,6 +134,11 @@ class HuggingFaceASR:
             last_error = f"empty transcript from {url}: {response.text[:300]}"
 
         raise ASRError(f"Hugging Face ASR failed ({model_id}): {last_error}")
+
+    def _asr_urls(self, model_id: str) -> list[str]:
+        if self._config.hf_asr_endpoint:
+            return [self._config.hf_asr_endpoint.rstrip("/")]
+        return [template.format(model=model_id) for template in _HF_INFERENCE_URLS]
 
 
 class HuggingFaceLLM:
@@ -154,7 +166,11 @@ class HuggingFaceLLM:
         else:
             user_prompt = RAG_PROMPT_TEMPLATE.format(context=context, language=lang_name, question=query)
 
-        model_id = self._config.natlas_model or LLM_MODEL_ID
+        model_id = (
+            (self._config.natlas_model or LLM_MODEL_ID)
+            if self._config.hf_llm_endpoint
+            else (self._config.hf_chat_model or LLM_SERVERLESS_MODEL)
+        )
         fallback = {
             "en": "I'm sorry, I couldn't generate a response right now. Please try again.",
             "yo": "Ẹ má bínú, mi ò lè dáhùn lọ́wọ́lọ́wọ́. Ẹ jọ̀wọ́ ẹ gbìyànjú lẹ́ẹ̀kan si.",
@@ -180,8 +196,12 @@ class HuggingFaceLLM:
             **_auth_headers(self._config.hf_token),
             "Content-Type": "application/json",
         }
+        chat_url = _HF_CHAT_URL
+        if self._config.hf_llm_endpoint:
+            base = self._config.hf_llm_endpoint.rstrip("/")
+            chat_url = base if base.endswith("/chat/completions") else f"{base}/v1/chat/completions"
         response = await self._client.post(
-            _HF_CHAT_URL,
+            chat_url,
             headers=headers,
             json={
                 "model": model_id,

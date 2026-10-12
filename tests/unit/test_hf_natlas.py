@@ -30,10 +30,27 @@ async def test_transcribe_posts_wav_to_hf(settings, tmp_path) -> None:
     settings.natlas_backend = "huggingface"
     settings.hf_token = "hf_test"
     route = respx.post(
-        "https://router.huggingface.co/hf-inference/models/NCAIR1/NigerianAccentedEnglish"
+        "https://router.huggingface.co/hf-inference/models/openai/whisper-large-v3"
     ).mock(return_value=httpx.Response(200, json={"text": "how much is rice"}))
     async with httpx.AsyncClient() as client:
         asr = HuggingFaceASR(client, settings)
         text = await asr.transcribe(str(wav), "en")
     assert text == "how much is rice"
+    assert route.called
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_transcribe_uses_dedicated_ncair_endpoint(settings, tmp_path) -> None:
+    wav = tmp_path / "clip.wav"
+    wav.write_bytes(b"RIFF....WAVE")
+    settings.hf_token = "hf_test"
+    settings.hf_asr_endpoint = "https://ncair-asr.endpoints.huggingface.cloud"
+    route = respx.post("https://ncair-asr.endpoints.huggingface.cloud").mock(
+        return_value=httpx.Response(200, json={"text": "beriberi"})
+    )
+    async with httpx.AsyncClient() as client:
+        asr = HuggingFaceASR(client, settings)
+        text = await asr.transcribe(str(wav), "en")
+    assert text == "beriberi"
     assert route.called

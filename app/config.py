@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     natlas_backend: str = "huggingface"
     natlas_device: str = "auto"
     hf_token: str = ""
+    # Dedicated Hugging Face Inference Endpoints serving NCAIR1 weights.
+    # Serverless hf-inference does not host NCAIR1 models.
+    hf_asr_endpoint: str = ""
+    hf_llm_endpoint: str = ""
+    hf_asr_model: str = "openai/whisper-large-v3"
+    hf_chat_model: str = "Qwen/Qwen2.5-7B-Instruct"
     natlas_base_url: str = ""
     natlas_asr_url: str = "https://api.natlas.ng/asr"
     natlas_llm_url: str = "https://api.natlas.ng/llm"
@@ -103,7 +109,14 @@ class Settings(BaseSettings):
             raise ValueError(f"natlas_backend must be one of {allowed}")
         return v
 
-    @field_validator("natlas_base_url", "natlas_asr_url", "natlas_llm_url", "app_base_url")
+    @field_validator(
+        "natlas_base_url",
+        "natlas_asr_url",
+        "natlas_llm_url",
+        "app_base_url",
+        "hf_asr_endpoint",
+        "hf_llm_endpoint",
+    )
     @classmethod
     def validate_urls(cls, v: str) -> str:
         if not v:
