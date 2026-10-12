@@ -13,4 +13,5 @@ COPY . .
 RUN python scripts/index_knowledge.py || true
 
 EXPOSE 8000
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'
+RUN chmod +x start.sh
+CMD ["./start.sh"]
