@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import threading
 from typing import Protocol
 
 import structlog
@@ -23,27 +25,43 @@ class RAGRetriever:
         threshold: float = 0.35,
         db: Database | None = None,
     ) -> None:
+        self._index_path = index_path
         self._threshold = threshold
         self._db = db
         self._embedder = None
         self._index = None
+        self._loaded = False
+        self._load_lock = threading.Lock()
 
-        try:
-            from langchain_community.embeddings import HuggingFaceEmbeddings
-            from langchain_community.vectorstores import FAISS
+    def _ensure_loaded(self) -> None:
+        """Load MiniLM/FAISS on a worker thread so uvicorn can bind first."""
+        if self._loaded:
+            return
+        with self._load_lock:
+            if self._loaded:
+                return
+            try:
+                from langchain_community.embeddings import HuggingFaceEmbeddings
+                from langchain_community.vectorstores import FAISS
 
-            self._embedder = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
-            self._index = FAISS.load_local(
-                index_path,
-                self._embedder,
-                allow_dangerous_deserialization=True,
-            )
-            logger.info("faiss_index_loaded", path=index_path)
-        except Exception:
-            logger.warning("faiss_unavailable", path=index_path)
+                self._embedder = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+                self._index = FAISS.load_local(
+                    self._index_path,
+                    self._embedder,
+                    allow_dangerous_deserialization=True,
+                )
+                logger.info("faiss_index_loaded", path=self._index_path)
+            except Exception:
+                logger.warning("faiss_unavailable", path=self._index_path)
+            self._loaded = True
+
+    async def warmup(self) -> None:
+        await asyncio.to_thread(self._ensure_loaded)
 
     async def retrieve(self, query: str, domain: str, top_k: int = 3) -> RetrievalResult:
         """Retrieve relevant chunks from the knowledge base."""
+        if getattr(self, "_index_path", None):
+            await self.warmup()
         if not self._index:
             logger.warning("rag_no_index")
             return RetrievalResult()
