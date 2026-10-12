@@ -58,14 +58,67 @@ def validate_twilio_signature(
     auth_token: str,
 ) -> bool:
     """Validate incoming Twilio webhook request."""
-    s = url
-    if params:
-        for key in sorted(params.keys()):
-            s += key + params[key]
+    if not signature or not auth_token:
+        return False
 
-    mac = hmac.new(auth_token.encode("utf-8"), s.encode("utf-8"), hashlib.sha1)
+    s = url
+    for key in sorted(params.keys()):
+        s += key
+        value = params[key]
+        if isinstance(value, list):
+            for item in value:
+                s += item
+        else:
+            s += value
+
+    mac = hmac.new(auth_token.strip().encode("utf-8"), s.encode("utf-8"), hashlib.sha1)
     computed = b64encode(mac.digest()).decode("utf-8")
-    return hmac.compare_digest(computed, signature)
+    try:
+        return hmac.compare_digest(computed, signature)
+    except Exception:
+        return False
+
+
+def twilio_signed_urls(request: Request, settings: Settings) -> list[str]:
+    """URLs Twilio may have signed. Railway's internal request.url is usually http."""
+    path = request.url.path
+    query = request.url.query
+    suffix = f"{path}?{query}" if query else path
+
+    candidates: list[str] = []
+    if settings.app_base_url:
+        candidates.append(f"{settings.app_base_url.rstrip('/')}{suffix}")
+
+    proto = (request.headers.get("x-forwarded-proto") or request.url.scheme).split(",")[0].strip()
+    host = (
+        request.headers.get("x-forwarded-host")
+        or request.headers.get("host")
+        or request.url.netloc
+    ).split(",")[0].strip()
+    if proto and host:
+        candidates.append(f"{proto}://{host}{suffix}")
+
+    candidates.append(str(request.url).split("#")[0])
+
+    seen: list[str] = []
+    for url in candidates:
+        url = url.rstrip("/") if url.endswith("/") and "?" not in url else url
+        if url and url not in seen:
+            seen.append(url)
+        if url.startswith("http://"):
+            https = "https://" + url[len("http://") :]
+            if https not in seen:
+                seen.append(https)
+    return seen
+
+
+def signature_is_valid(request: Request, params: dict, settings: Settings) -> bool:
+    signature = request.headers.get("X-Twilio-Signature", "")
+    token = settings.twilio_auth_token
+    for url in twilio_signed_urls(request, settings):
+        if validate_twilio_signature(url, params, signature, token):
+            return True
+    return False
 
 
 def twiml_reply(message: str) -> FastAPIResponse:
@@ -116,12 +169,14 @@ async def twilio_whatsapp_webhook(
 ) -> FastAPIResponse:
     """Handle incoming WhatsApp messages via Twilio Sandbox (form-data)."""
     if settings.twilio_auth_token:
-        signature = request.headers.get("X-Twilio-Signature", "")
-        url = str(request.url).split("?")[0]
         form_data = await request.form()
         params = _form_params_for_signature(form_data)
-        if not validate_twilio_signature(url, params, signature, settings.twilio_auth_token):
-            logger.warning("twilio_signature_invalid", message_sid=MessageSid)
+        if not signature_is_valid(request, params, settings):
+            logger.warning(
+                "twilio_signature_invalid",
+                message_sid=MessageSid,
+                signed_urls=twilio_signed_urls(request, settings),
+            )
             return twiml_empty()
 
     phone_number = normalize_ng_phone(extract_phone_number(From))
