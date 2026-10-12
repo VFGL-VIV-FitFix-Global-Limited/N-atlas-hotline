@@ -64,7 +64,7 @@ async def _boot_pipeline() -> None:
 
         db = Database(settings.database_path)
         await db.connect()
-        http_client = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
+        http_client = httpx.AsyncClient(timeout=httpx.Timeout(90.0))
         asr = build_asr(http_client, settings)
         intent = IntentClassifier()
         rag = RAGRetriever(settings.faiss_index_path, settings.rag_confidence_threshold, db=db)
