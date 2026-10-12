@@ -25,7 +25,7 @@ from app.middleware.request_id import RequestIDMiddleware
 from app.models.database import Database
 from app.models.schemas import StatsResponse
 from app.pipeline.factory import build_asr, build_llm
-from app.pipeline.hf_models import ATTRIBUTION, LLM_HF_URL
+from app.pipeline.hf_models import LLM_HF_URL
 from app.pipeline.intent import IntentClassifier
 from app.pipeline.orchestrator import PipelineOrchestrator
 from app.pipeline.rag import RAGRetriever
@@ -57,23 +57,16 @@ def configure_logging(log_level: str) -> None:
     )
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Startup: wire all dependencies. Shutdown: clean up."""
+async def _boot_pipeline() -> None:
+    """Heavy init after the socket is open so /health is never blocked."""
     settings = get_settings()
     configure_logging(settings.log_level)
-
     logger = structlog.get_logger(__name__)
     logger.info("starting_up", environment=settings.environment.value)
 
-    # Database
     db = Database(settings.database_path)
     await db.connect()
-
-    # HTTP client for external API calls
     http_client = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
-
-    # Pipeline components
     asr = build_asr(http_client, settings)
     intent = IntentClassifier()
     rag = RAGRetriever(settings.faiss_index_path, settings.rag_confidence_threshold, db=db)
@@ -81,25 +74,32 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     tts = GoogleTTS(settings.audio_dir)
     orchestrator = PipelineOrchestrator(asr, intent, rag, llm, tts, db, settings)
 
-    # Set module-level singletons for dependency injection
     dependencies._db = db
+    dependencies._http_client = http_client
     dependencies._orchestrator = orchestrator
-
     logger.info(
         "startup_complete",
         natlas_backend=settings.natlas_backend,
         natlas_model=settings.natlas_model,
         source=LLM_HF_URL,
     )
-    # Do not await MiniLM here — uvicorn only binds the port after lifespan yields.
-    rag_warmup = asyncio.create_task(rag.warmup())
-    yield
+    await rag.warmup()
 
-    # Shutdown
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Yield immediately so Uvicorn binds PORT; pipeline boots in the background."""
+    boot = asyncio.create_task(_boot_pipeline())
+    yield
+    boot.cancel()
+    logger = structlog.get_logger(__name__)
     logger.info("shutting_down")
-    rag_warmup.cancel()
-    await http_client.aclose()
-    await db.disconnect()
+    http_client = getattr(dependencies, "_http_client", None)
+    if http_client is not None:
+        await http_client.aclose()
+    db = dependencies._db
+    if db is not None:
+        await db.disconnect()
     logger.info("shutdown_complete")
 
 
@@ -125,30 +125,13 @@ app.include_router(twilio_router)
 # --- Health & Stats ---
 
 @app.get("/health")
-async def health(settings: Settings = Depends(get_settings)) -> dict:
-    natlas: dict = {
-        "backend": settings.natlas_backend,
-        "model": settings.natlas_model,
-        "source": LLM_HF_URL,
-        "attribution": ATTRIBUTION,
-    }
-    if settings.natlas_backend == "gateway" and settings.natlas_base_url:
-        try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(settings.natlas_health_url, timeout=5.0)
-                natlas["gateway"] = (
-                    resp.json()
-                    if "application/json" in resp.headers.get("content-type", "")
-                    else {"http_status": resp.status_code}
-                )
-        except Exception as exc:
-            natlas["gateway"] = {"status": "unreachable", "error": type(exc).__name__}
-
+async def health() -> dict:
+    """No dependencies — must work even while the pipeline is still booting."""
     return {
         "status": "ok",
         "version": "1.0.0",
         "service": "n-atlas-hotline",
-        "natlas": natlas,
+        "ready": dependencies._orchestrator is not None,
     }
 
 
