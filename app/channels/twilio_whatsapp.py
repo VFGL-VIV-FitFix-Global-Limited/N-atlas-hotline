@@ -317,12 +317,25 @@ async def _process_voice_note(
         )
         tmp_audio_path = None
 
-        # Text only — sandbox 429s if we also send the TTS audio as a second message.
-        await _send_twilio_message(
-            to=f"whatsapp:{phone_number}",
-            body=result.response_text,
-            settings=settings,
-        )
+        # One Twilio message: N-ATLaS text + Soro/gTTS audio (two messages 429 the sandbox).
+        media_url = None
+        if result.response_audio_path:
+            media_url = f"{settings.app_base_url}/audio/{Path(result.response_audio_path).name}"
+        try:
+            await _send_twilio_message(
+                to=f"whatsapp:{phone_number}",
+                body=result.response_text,
+                settings=settings,
+                media_url=media_url,
+            )
+        except TwilioRateLimited:
+            log.error(
+                "twilio_sandbox_rate_limited_answer_not_delivered",
+                language=language.value,
+                intent=result.intent_domain.value,
+                response_text=result.response_text,
+            )
+            return
 
         log.info(
             "voice_note_processed",
@@ -331,6 +344,8 @@ async def _process_voice_note(
             response_length=len(result.response_text),
         )
 
+    except TwilioRateLimited:
+        log.error("twilio_sandbox_rate_limited")
     except Exception as e:
         log.error("voice_note_processing_failed", error=str(e))
         try:
@@ -339,6 +354,8 @@ async def _process_voice_note(
                 body="⚠️ Sorry, I couldn't process your voice note. Please try again.",
                 settings=settings,
             )
+        except TwilioRateLimited:
+            log.error("error_reply_skipped_rate_limit")
         except Exception:
             log.error("error_reply_failed")
 
@@ -348,6 +365,10 @@ async def _process_voice_note(
                 os.unlink(tmp_audio_path)
             except OSError:
                 pass
+
+
+class TwilioRateLimited(Exception):
+    """Twilio WhatsApp sandbox daily/rate cap — retrying makes it worse."""
 
 
 async def _send_twilio_message(
@@ -368,26 +389,16 @@ async def _send_twilio_message(
         data["MediaUrl"] = media_url
 
     async with httpx.AsyncClient(timeout=15.0) as client:
-        last_error: Exception | None = None
-        for attempt in range(6):
-            response = await client.post(
-                url,
-                data=data,
-                auth=(settings.twilio_account_sid, settings.twilio_auth_token),
-            )
-            if response.status_code == 429:
-                retry_after = float(response.headers.get("Retry-After") or 20)
-                logger.warning("twilio_rate_limited", attempt=attempt + 1, retry_after=retry_after)
-                await asyncio.sleep(min(retry_after, 45))
-                last_error = httpx.HTTPStatusError(
-                    "429 Too Many Requests", request=response.request, response=response
-                )
-                continue
-            response.raise_for_status()
-            last_error = None
-            break
-        if last_error:
-            raise last_error
+        response = await client.post(
+            url,
+            data=data,
+            auth=(settings.twilio_account_sid, settings.twilio_auth_token),
+        )
 
+    if response.status_code == 429:
+        logger.warning("twilio_rate_limited", retry_after=response.headers.get("Retry-After"))
+        raise TwilioRateLimited("Twilio WhatsApp sandbox rate limit")
+
+    response.raise_for_status()
     suffix = to[-4:] if len(to) >= 4 else to
     logger.info("twilio_message_sent", to=suffix, body_length=len(body))

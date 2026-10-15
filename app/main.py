@@ -29,7 +29,7 @@ from app.pipeline.hf_models import LLM_HF_URL
 from app.pipeline.intent import IntentClassifier
 from app.pipeline.orchestrator import PipelineOrchestrator
 from app.pipeline.rag import RAGRetriever
-from app.pipeline.tts import GoogleTTS
+from app.pipeline.tts import HotlineTTS
 
 
 def configure_logging(log_level: str) -> None:
@@ -69,7 +69,7 @@ async def _boot_pipeline() -> None:
         intent = IntentClassifier()
         rag = RAGRetriever(settings.faiss_index_path, settings.rag_confidence_threshold, db=db)
         llm = build_llm(http_client, settings)
-        tts = GoogleTTS(settings.audio_dir)
+        tts = HotlineTTS(settings.audio_dir)
         orchestrator = PipelineOrchestrator(asr, intent, rag, llm, tts, db, settings)
 
         dependencies._db = db
@@ -144,7 +144,11 @@ async def serve_audio(filename: str, settings: Settings = Depends(get_settings))
     path = Path(settings.audio_dir) / safe
     if not path.is_file():
         raise HTTPException(status_code=404, detail="Audio not found")
-    media = "audio/ogg" if path.suffix == ".ogg" else "audio/mpeg"
+    media = {
+        ".ogg": "audio/ogg",
+        ".wav": "audio/wav",
+        ".mp3": "audio/mpeg",
+    }.get(path.suffix.lower(), "audio/mpeg")
     return FileResponse(path, media_type=media)
 
 
