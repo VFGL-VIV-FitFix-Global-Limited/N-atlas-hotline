@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 import asyncio
+import csv
+import io
 import logging
 import sys
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncGenerator
 
 import httpx
 import structlog
-from fastapi import Depends, FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse, Response
 from slowapi.errors import RateLimitExceeded
 
 from app import dependencies
@@ -23,7 +26,13 @@ from app.middleware.error_handler import register_error_handlers
 from app.middleware.rate_limiter import limiter, rate_limit_handler
 from app.middleware.request_id import RequestIDMiddleware
 from app.models.database import Database
-from app.models.schemas import StatsResponse
+from app.models.schemas import (
+    Channel,
+    Domain,
+    InteractionRecord,
+    SpaceLogIn,
+    StatsResponse,
+)
 from app.pipeline.factory import build_asr, build_llm
 from app.pipeline.hf_models import LLM_HF_URL
 from app.pipeline.intent import IntentClassifier
@@ -155,3 +164,63 @@ async def serve_audio(filename: str, settings: Settings = Depends(get_settings))
 @app.get("/stats", dependencies=[Depends(verify_api_key)])
 async def stats(db: Database = Depends(get_db)) -> StatsResponse:
     return await db.get_stats()
+
+
+@app.get("/interactions", dependencies=[Depends(verify_api_key)])
+async def interactions(
+    db: Database = Depends(get_db),
+    limit: int = Query(500, ge=1, le=2000),
+) -> dict:
+    """Transcript + N-ATLaS reply for submission. No voice files, no raw phone."""
+    return {"interactions": await db.list_interactions(limit)}
+
+
+@app.get("/interactions.csv", dependencies=[Depends(verify_api_key)])
+async def interactions_csv(
+    db: Database = Depends(get_db),
+    limit: int = Query(500, ge=1, le=2000),
+) -> Response:
+    rows = await db.list_interactions(limit)
+    buf = io.StringIO()
+    fields = [
+        "id",
+        "created_at",
+        "channel",
+        "language",
+        "question_text",
+        "response_text",
+        "intent_domain",
+        "processing_time_ms",
+    ]
+    writer = csv.DictWriter(buf, fieldnames=fields, extrasaction="ignore")
+    writer.writeheader()
+    for row in rows:
+        writer.writerow({k: row.get(k, "") for k in fields})
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=interactions.csv"},
+    )
+
+
+@app.post("/interactions", dependencies=[Depends(verify_api_key)])
+async def ingest_interaction(
+    body: SpaceLogIn,
+    db: Database = Depends(get_db),
+) -> dict:
+    """Space (and other UIs) post Q&A here so one log has WhatsApp + reviewer tests."""
+    record = InteractionRecord(
+        session_id=body.session_id or str(uuid.uuid4()),
+        channel=Channel.SPACE,
+        user_phone_hash="",
+        language=body.language,
+        question_text=body.question_text,
+        intent_domain=Domain.GENERAL,
+        response_text=body.response_text,
+        rag_confidence=0.0,
+        out_of_knowledge=False,
+        processing_time_ms=0,
+        retrieved_sources=[],
+    )
+    row_id = await db.log_interaction(record)
+    return {"id": row_id}

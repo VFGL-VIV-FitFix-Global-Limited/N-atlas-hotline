@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import aiosqlite
@@ -21,6 +22,7 @@ MIGRATIONS_DIR = Path(__file__).resolve().parent.parent.parent / "migrations"
 class Database:
     def __init__(self, db_path: str) -> None:
         self._db_path = db_path
+        self._jsonl_path = Path(db_path).parent / "interactions.jsonl"
         self._connection: aiosqlite.Connection | None = None
 
     async def connect(self) -> None:
@@ -76,7 +78,76 @@ class Database:
             ),
         )
         await self.conn.commit()
-        return cursor.lastrowid or 0
+        row_id = cursor.lastrowid or 0
+        self._append_jsonl(record, row_id)
+        return row_id
+
+    def _append_jsonl(self, record: InteractionRecord, row_id: int) -> None:
+        """Durable-enough copy next to SQLite so you can download Q&A for submission."""
+        try:
+            self._jsonl_path.parent.mkdir(parents=True, exist_ok=True)
+            line = json.dumps(
+                {
+                    "id": row_id,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "session_id": record.session_id,
+                    "channel": record.channel.value,
+                    "language": record.language.value,
+                    "question_text": record.question_text,
+                    "response_text": record.response_text,
+                    "intent_domain": record.intent_domain.value,
+                    "rag_confidence": record.rag_confidence,
+                    "out_of_knowledge": record.out_of_knowledge,
+                    "processing_time_ms": record.processing_time_ms,
+                    "retrieved_sources": record.retrieved_sources,
+                },
+                ensure_ascii=False,
+            )
+            with self._jsonl_path.open("a", encoding="utf-8") as f:
+                f.write(line + "\n")
+        except OSError:
+            logger.warning("interaction_jsonl_write_failed", path=str(self._jsonl_path))
+
+    async def list_interactions(self, limit: int = 500) -> list[dict]:
+        cap = max(1, min(limit, 2000))
+        rows = await (
+            await self.conn.execute(
+                """
+                SELECT id, created_at, session_id, channel, language,
+                       question_text, response_text, intent_domain,
+                       rag_confidence, out_of_knowledge, processing_time_ms,
+                       retrieved_sources
+                FROM interactions
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (cap,),
+            )
+        ).fetchall()
+        out: list[dict] = []
+        for r in rows:
+            sources = r["retrieved_sources"]
+            try:
+                sources = json.loads(sources) if sources else []
+            except json.JSONDecodeError:
+                sources = []
+            out.append(
+                {
+                    "id": r["id"],
+                    "created_at": r["created_at"],
+                    "session_id": r["session_id"],
+                    "channel": r["channel"],
+                    "language": r["language"],
+                    "question_text": r["question_text"],
+                    "response_text": r["response_text"],
+                    "intent_domain": r["intent_domain"],
+                    "rag_confidence": r["rag_confidence"],
+                    "out_of_knowledge": bool(r["out_of_knowledge"]),
+                    "processing_time_ms": r["processing_time_ms"],
+                    "retrieved_sources": sources,
+                }
+            )
+        return out
 
     async def get_stats(self) -> StatsResponse:
         # Total
