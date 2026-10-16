@@ -74,11 +74,15 @@ def _predict(audio_path: str, language: str, settings: Settings) -> tuple[str, s
     src = _audio_src(raw[2] if len(raw) > 2 else None)
     saved: str | None = None
     if src and Path(src).is_file():
+        from app.utils.audio import to_whatsapp_mp3
+
         dest_dir = Path(settings.audio_dir)
         dest_dir.mkdir(parents=True, exist_ok=True)
-        dest = dest_dir / f"{uuid.uuid4().hex}{Path(src).suffix or '.wav'}"
-        shutil.copy(src, dest)
-        saved = str(dest)
+        tmp = dest_dir / f"{uuid.uuid4().hex}{Path(src).suffix or '.wav'}"
+        shutil.copy(src, tmp)
+        saved = to_whatsapp_mp3(str(tmp), str(dest_dir))
+        if saved != str(tmp):
+            tmp.unlink(missing_ok=True)
     return transcript, reply, saved
 
 

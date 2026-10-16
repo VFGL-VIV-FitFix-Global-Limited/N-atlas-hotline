@@ -46,3 +46,20 @@ def _to_ogg_sync(input_path: str) -> str:
     audio.export(output_path, format="ogg", codec="libopus")
     logger.info("audio_converted", source=input_path, target=output_path, format="ogg_opus")
     return output_path
+
+
+def to_whatsapp_mp3(input_path: str, dest_dir: str) -> str:
+    """Twilio WhatsApp sandbox rejects WAV. Put an MP3 next to dest_dir."""
+    p = Path(input_path)
+    out_dir = Path(dest_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    if p.suffix.lower() == ".mp3":
+        dest = out_dir / p.name
+        if dest.resolve() != p.resolve():
+            dest.write_bytes(p.read_bytes())
+        return str(dest)
+    dest = out_dir / f"{p.stem}.mp3"
+    audio = AudioSegment.from_file(input_path)
+    audio.export(str(dest), format="mp3")
+    logger.info("audio_converted", source=input_path, target=str(dest), format="mp3")
+    return str(dest)
