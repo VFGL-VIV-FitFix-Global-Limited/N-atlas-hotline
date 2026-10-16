@@ -27,11 +27,11 @@ ASR is the matching Whisper Small checkpoints, also local:
 | Yoruba | `NCAIR1/Yoruba-ASR` |
 | Nigerian English | `NCAIR1/NigerianAccentedEnglish` |
 
-**Default for this hotline is `NATLAS_BACKEND=gateway`.** That is the production path (Railway/Render): HTTP calls, no GPU on your server.
+**Demo default for WhatsApp is `NATLAS_BACKEND=space`:** Railway calls the Hugging Face Space (`HF_SPACE_ID`, default `onomeakpobaro/hotline`) so evaluators and users share one N-ATLaS GPU. The Space loads weights with `from_pretrained` as on the model card.
 
-Set `NATLAS_ASR_URL`, `NATLAS_LLM_URL`, and `NATLAS_API_KEY`. If the host is OpenAI-compatible (vLLM / TGI / the N-ATLAS kit), you can set `NATLAS_BASE_URL` instead and we derive `/v1/audio/transcriptions` and `/v1/chat/completions`.
+`gateway` is the Colab / OpenAI-compatible path (`NATLAS_BASE_URL` → `/v1/audio/transcriptions` and `/v1/chat/completions`). Fragile on trycloudflare (HTTP 524 if the 8B is slow or CPU-offloaded).
 
-`local` is optional and only for a GPU workstation (`AutoModelForCausalLM.from_pretrained("NCAIR1/N-ATLaS")`). Do not use it on Railway. `huggingface` uses the HF Inference API with the same repo IDs.
+`local` is a GPU workstation only. Do not use it on Railway CPU. `huggingface` serverless does not host NCAIR1; dedicated Inference Endpoints only.
 
 ## Attribution
 

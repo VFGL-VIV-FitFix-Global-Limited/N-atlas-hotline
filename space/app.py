@@ -11,6 +11,21 @@ import tempfile
 import wave
 from datetime import datetime, timezone
 
+# Gradio 5.9 + Audio schema uses additionalProperties: true (a bool).
+# json_schema_to_python_type then does `"const" in True` and the Space dies.
+import gradio_client.utils as _gc_utils
+
+_orig_schema_type = _gc_utils._json_schema_to_python_type
+
+
+def _json_schema_to_python_type(schema, defs=None):
+    if not isinstance(schema, dict):
+        return "Any"
+    return _orig_schema_type(schema, defs)
+
+
+_gc_utils._json_schema_to_python_type = _json_schema_to_python_type
+
 import gradio as gr
 import numpy as np
 import spaces
@@ -114,7 +129,7 @@ def _speak(text: str, lang: str) -> str | None:
         return None
 
 
-@spaces.GPU(duration=80)
+@spaces.GPU(duration=120)
 def _run_on_gpu(audio_path: str, language: str) -> tuple[str, str, str | None]:
     if not audio_path:
         return "", "Record or upload a short voice note first.", None
@@ -245,7 +260,7 @@ First request can take 1–2 minutes (GPU + model load). Use a **short** voice n
         answer,
         inputs=[audio, language],
         outputs=[transcript, reply, spoken],
-        api_name=False,
+        api_name="ask",
     )
     gr.Markdown(
         "N-ATLaS is an initiative of the Federal Ministry of Communications, "
@@ -255,4 +270,4 @@ First request can take 1–2 minutes (GPU + model load). Use a **short** voice n
 demo.queue()
 
 if __name__ == "__main__":
-    demo.launch(ssr_mode=False, show_api=False)
+    demo.launch(ssr_mode=False, show_api=False, server_name="0.0.0.0")

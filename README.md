@@ -2,7 +2,9 @@
 
 Voice-first AI assistant for Nigerians. Call or send a WhatsApp voice note in Yoruba, Hausa, Igbo or English. Answers cover government services, health, agriculture and market prices.
 
-Powered by official **[NCAIR1/N-ATLaS](https://huggingface.co/NCAIR1/N-ATLaS)**. Default runtime is a **hosted gateway** (`NATLAS_BACKEND=gateway`) so you do not need a GPU. `local` (`from_pretrained`) is optional for a workstation.
+Powered by official **[NCAIR1/N-ATLaS](https://huggingface.co/NCAIR1/N-ATLaS)** (ASR + text LLM). Spoken replies use **Soro-TTS** (Yoruba/Igbo/Hausa) or **gTTS** (English) — N-ATLaS has no TTS.
+
+Evaluator demo: [Hugging Face Space](https://huggingface.co/spaces/onomeakpobaro/hotline). WhatsApp on Railway uses `NATLAS_BACKEND=space` so it hits that same GPU. Product write-up: [`docs/prd.md`](docs/prd.md).
 
 **VFGL Tech** · NAIC 2026 · PS2 Voice-First Access
 
@@ -26,7 +28,7 @@ uvicorn app.main:app --reload --port 8000
 ```
 
 Health check: `GET http://localhost:8000/health`  
-Stats (API key): `GET http://localhost:8000/stats` with header `X-API-Key`.
+Stats: `GET /stats`. Q&A log: `GET /interactions` and `GET /interactions.csv` (header `X-API-Key`).
 
 ## Webhooks
 
@@ -49,4 +51,4 @@ docker compose up --build
 
 ## Project layout
 
-See `docs/architecture.md` and `docs/natlas_integration.md`.
+See `docs/prd.md` (as-built product), `docs/architecture.md`, and `docs/natlas_integration.md`.
