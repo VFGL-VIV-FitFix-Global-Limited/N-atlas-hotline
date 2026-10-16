@@ -16,3 +16,4 @@ structlog>=23.2.0
 tenacity>=8.2.0
 slowapi>=0.1.9
 huggingface_hub>=0.24.0,<1.0.0
+gradio_client>=1.4.0

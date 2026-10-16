@@ -27,9 +27,10 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Form, Request
 from fastapi.responses import Response as FastAPIResponse
 
 from app.config import Settings
-from app.dependencies import get_orchestrator, get_session_store, get_settings
-from app.models.schemas import Channel, Language, PipelineRequest
+from app.dependencies import get_db, get_orchestrator, get_session_store, get_settings
+from app.models.schemas import Channel, Domain, InteractionRecord, Language, PipelineRequest
 from app.pipeline.orchestrator import PipelineOrchestrator
+from app.pipeline.space_hotline import SpaceHotlineError, ask_space
 from app.services.session import SessionStore
 from app.utils.hashing import hash_phone
 from app.utils.phone import normalize_ng_phone
@@ -305,6 +306,72 @@ async def _process_voice_note(
             tmp_audio_path = tmp.name
 
         log.info("voice_note_downloaded", path=tmp_audio_path, size=len(response.content))
+
+        if settings.natlas_backend == "space":
+            try:
+                transcript, reply, audio_path = await ask_space(
+                    tmp_audio_path, language.value, settings
+                )
+            except SpaceHotlineError as e:
+                tmp_audio_path = None
+                try:
+                    await _send_twilio_message(
+                        to=f"whatsapp:{phone_number}",
+                        body=e.user_message,
+                        settings=settings,
+                    )
+                except TwilioRateLimited:
+                    log.error("space_error_skipped_rate_limit")
+                return
+            Path(tmp_audio_path).unlink(missing_ok=True)
+            tmp_audio_path = None
+            session_id = str(uuid.uuid4())
+            try:
+                db = await get_db()
+                await db.log_interaction(
+                    InteractionRecord(
+                        session_id=session_id,
+                        channel=Channel.WHATSAPP,
+                        user_phone_hash=phone_hash,
+                        language=language,
+                        question_text=transcript,
+                        intent_domain=Domain.GENERAL,
+                        response_text=reply,
+                        rag_confidence=0.0,
+                        out_of_knowledge=False,
+                        processing_time_ms=0,
+                        retrieved_sources=[],
+                    )
+                )
+            except Exception:
+                log.exception("space_interaction_log_failed")
+            media_url = None
+            if audio_path:
+                media_url = f"{settings.app_base_url}/audio/{Path(audio_path).name}"
+            body = reply or transcript or "I heard you, but N-ATLaS returned an empty reply."
+            if transcript:
+                body = f"Heard: {transcript}\n\n{body}"
+            try:
+                await _send_twilio_message(
+                    to=f"whatsapp:{phone_number}",
+                    body=body,
+                    settings=settings,
+                    media_url=media_url,
+                )
+            except TwilioRateLimited:
+                log.error(
+                    "twilio_sandbox_rate_limited_answer_not_delivered",
+                    language=language.value,
+                    response_text=reply,
+                )
+                return
+            log.info(
+                "voice_note_processed",
+                language=language.value,
+                via="space",
+                response_length=len(reply),
+            )
+            return
 
         result = await orchestrator.process(
             PipelineRequest(

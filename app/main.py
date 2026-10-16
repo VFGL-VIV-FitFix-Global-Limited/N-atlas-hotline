@@ -84,7 +84,11 @@ async def _boot_pipeline() -> None:
         dependencies._db = db
         dependencies._http_client = http_client
         dependencies._orchestrator = orchestrator
-        token_ok = bool(settings.hf_token) if settings.natlas_backend in {"huggingface", "local"} else True
+        token_ok = (
+            bool(settings.hf_token)
+            if settings.natlas_backend in {"huggingface", "local"}
+            else True
+        )
         print(
             f"[boot] pipeline ready  backend={settings.natlas_backend}  hf_token={'set' if token_ok else 'MISSING'}",
             flush=True,
@@ -93,6 +97,8 @@ async def _boot_pipeline() -> None:
             asr_name = settings.hf_asr_endpoint or settings.hf_asr_model
             llm_name = settings.hf_llm_endpoint or settings.hf_chat_model
             print(f"[boot] hf asr={asr_name}  llm={llm_name}", flush=True)
+        if settings.natlas_backend == "space":
+            print(f"[boot] WhatsApp → Space {settings.hf_space_id}", flush=True)
         if settings.natlas_backend in {"huggingface", "local"} and not settings.hf_token:
             print("[boot] WARNING: HF_TOKEN is empty — ASR/LLM calls to Hugging Face will fail", flush=True)
         await rag.warmup()

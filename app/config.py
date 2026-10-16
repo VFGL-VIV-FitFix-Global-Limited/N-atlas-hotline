@@ -27,10 +27,12 @@ def natlas_v1_url(base: str, path: str) -> str:
 
 
 class Settings(BaseSettings):
-    # huggingface (default) = Hugging Face Inference API — use this on Railway
-    # gateway = hosted OpenAI-compatible HTTP API
-    # local = from_pretrained (GPU only; not for production)
+    # huggingface = HF Inference API (NCAIR1 is not on serverless)
+    # gateway = Colab / OpenAI-compatible host
+    # space = WhatsApp calls the Hugging Face Space (same GPU as reviewers)
+    # local = from_pretrained (GPU only)
     natlas_backend: str = "huggingface"
+    hf_space_id: str = "onomeakpobaro/hotline"
     natlas_device: str = "auto"
     hf_token: str = ""
     # Dedicated Hugging Face Inference Endpoints serving NCAIR1 weights.
@@ -104,7 +106,7 @@ class Settings(BaseSettings):
     @field_validator("natlas_backend")
     @classmethod
     def validate_backend(cls, v: str) -> str:
-        allowed = {"local", "huggingface", "gateway"}
+        allowed = {"local", "huggingface", "gateway", "space"}
         if v not in allowed:
             raise ValueError(f"natlas_backend must be one of {allowed}")
         return v
