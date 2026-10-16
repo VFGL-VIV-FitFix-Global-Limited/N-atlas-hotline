@@ -27,12 +27,20 @@ def natlas_v1_url(base: str, path: str) -> str:
 
 
 class Settings(BaseSettings):
-    # gateway (default) = hosted HTTP API — use this on Railway/Render
-    # huggingface = HF Inference API
-    # local = from_pretrained (GPU only; not for production)
-    natlas_backend: str = "gateway"
+    # huggingface = HF Inference API (NCAIR1 is not on serverless)
+    # gateway = Colab / OpenAI-compatible host
+    # space = WhatsApp calls the Hugging Face Space (same GPU as reviewers)
+    # local = from_pretrained (GPU only)
+    natlas_backend: str = "huggingface"
+    hf_space_id: str = "onomeakpobaro/hotline"
     natlas_device: str = "auto"
     hf_token: str = ""
+    # Dedicated Hugging Face Inference Endpoints serving NCAIR1 weights.
+    # Serverless hf-inference does not host NCAIR1 models.
+    hf_asr_endpoint: str = ""
+    hf_llm_endpoint: str = ""
+    hf_asr_model: str = "openai/whisper-large-v3"
+    hf_chat_model: str = "Qwen/Qwen2.5-7B-Instruct"
     natlas_base_url: str = ""
     natlas_asr_url: str = "https://api.natlas.ng/asr"
     natlas_llm_url: str = "https://api.natlas.ng/llm"
@@ -81,8 +89,8 @@ class Settings(BaseSettings):
     max_response_words: int = 150
     max_call_duration_seconds: int = 180
     max_recording_seconds: int = 30
-    asr_timeout_seconds: int = 10
-    llm_timeout_seconds: int = 15
+    asr_timeout_seconds: int = 180
+    llm_timeout_seconds: int = 180
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "populate_by_name": True}
 
@@ -98,12 +106,19 @@ class Settings(BaseSettings):
     @field_validator("natlas_backend")
     @classmethod
     def validate_backend(cls, v: str) -> str:
-        allowed = {"local", "huggingface", "gateway"}
+        allowed = {"local", "huggingface", "gateway", "space"}
         if v not in allowed:
             raise ValueError(f"natlas_backend must be one of {allowed}")
         return v
 
-    @field_validator("natlas_base_url", "natlas_asr_url", "natlas_llm_url", "app_base_url")
+    @field_validator(
+        "natlas_base_url",
+        "natlas_asr_url",
+        "natlas_llm_url",
+        "app_base_url",
+        "hf_asr_endpoint",
+        "hf_llm_endpoint",
+    )
     @classmethod
     def validate_urls(cls, v: str) -> str:
         if not v:

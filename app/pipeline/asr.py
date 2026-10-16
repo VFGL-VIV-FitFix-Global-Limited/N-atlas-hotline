@@ -51,7 +51,7 @@ class NatlasASR:
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=4),
         retry=retry_if_exception(_retry_transient),
-        before_sleep=before_sleep_log(logger, "WARNING"),
+        before_sleep=before_sleep_log(logger, 30),
     )
     async def transcribe(self, audio_path: str, language: str) -> str:
         filename = Path(audio_path).name

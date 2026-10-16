@@ -14,6 +14,7 @@ class Language(str, Enum):
 class Channel(str, Enum):
     PHONE = "phone"
     WHATSAPP = "whatsapp"
+    SPACE = "space"
 
 
 class Domain(str, Enum):
@@ -82,3 +83,12 @@ class StatsResponse(BaseModel):
     by_domain: dict[str, int]
     out_of_knowledge_count: int
     avg_response_time_ms: float
+
+
+class SpaceLogIn(BaseModel):
+    """Q&A from the Hugging Face Space — no phone, no audio."""
+
+    question_text: str
+    response_text: str
+    language: Language
+    session_id: str = ""

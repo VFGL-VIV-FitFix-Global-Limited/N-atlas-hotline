@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 import asyncio
+import csv
+import io
 import logging
 import sys
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncGenerator
 
 import httpx
 import structlog
-from fastapi import Depends, FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse, Response
 from slowapi.errors import RateLimitExceeded
 
 from app import dependencies
@@ -23,13 +26,19 @@ from app.middleware.error_handler import register_error_handlers
 from app.middleware.rate_limiter import limiter, rate_limit_handler
 from app.middleware.request_id import RequestIDMiddleware
 from app.models.database import Database
-from app.models.schemas import StatsResponse
+from app.models.schemas import (
+    Channel,
+    Domain,
+    InteractionRecord,
+    SpaceLogIn,
+    StatsResponse,
+)
 from app.pipeline.factory import build_asr, build_llm
 from app.pipeline.hf_models import LLM_HF_URL
 from app.pipeline.intent import IntentClassifier
 from app.pipeline.orchestrator import PipelineOrchestrator
 from app.pipeline.rag import RAGRetriever
-from app.pipeline.tts import GoogleTTS
+from app.pipeline.tts import HotlineTTS
 
 
 def configure_logging(log_level: str) -> None:
@@ -64,18 +73,34 @@ async def _boot_pipeline() -> None:
 
         db = Database(settings.database_path)
         await db.connect()
-        http_client = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
+        http_client = httpx.AsyncClient(timeout=httpx.Timeout(200.0))
         asr = build_asr(http_client, settings)
         intent = IntentClassifier()
         rag = RAGRetriever(settings.faiss_index_path, settings.rag_confidence_threshold, db=db)
         llm = build_llm(http_client, settings)
-        tts = GoogleTTS(settings.audio_dir)
+        tts = HotlineTTS(settings.audio_dir)
         orchestrator = PipelineOrchestrator(asr, intent, rag, llm, tts, db, settings)
 
         dependencies._db = db
         dependencies._http_client = http_client
         dependencies._orchestrator = orchestrator
-        print(f"[boot] pipeline ready  backend={settings.natlas_backend}", flush=True)
+        token_ok = (
+            bool(settings.hf_token)
+            if settings.natlas_backend in {"huggingface", "local"}
+            else True
+        )
+        print(
+            f"[boot] pipeline ready  backend={settings.natlas_backend}  hf_token={'set' if token_ok else 'MISSING'}",
+            flush=True,
+        )
+        if settings.natlas_backend == "huggingface":
+            asr_name = settings.hf_asr_endpoint or settings.hf_asr_model
+            llm_name = settings.hf_llm_endpoint or settings.hf_chat_model
+            print(f"[boot] hf asr={asr_name}  llm={llm_name}", flush=True)
+        if settings.natlas_backend == "space":
+            print(f"[boot] WhatsApp → Space {settings.hf_space_id}", flush=True)
+        if settings.natlas_backend in {"huggingface", "local"} and not settings.hf_token:
+            print("[boot] WARNING: HF_TOKEN is empty — ASR/LLM calls to Hugging Face will fail", flush=True)
         await rag.warmup()
         print("[boot] rag warmup done", flush=True)
     except Exception as exc:
@@ -134,10 +159,74 @@ async def serve_audio(filename: str, settings: Settings = Depends(get_settings))
     path = Path(settings.audio_dir) / safe
     if not path.is_file():
         raise HTTPException(status_code=404, detail="Audio not found")
-    media = "audio/ogg" if path.suffix == ".ogg" else "audio/mpeg"
+    media = {
+        ".ogg": "audio/ogg",
+        ".wav": "audio/wav",
+        ".mp3": "audio/mpeg",
+    }.get(path.suffix.lower(), "audio/mpeg")
     return FileResponse(path, media_type=media)
 
 
 @app.get("/stats", dependencies=[Depends(verify_api_key)])
 async def stats(db: Database = Depends(get_db)) -> StatsResponse:
     return await db.get_stats()
+
+
+@app.get("/interactions", dependencies=[Depends(verify_api_key)])
+async def interactions(
+    db: Database = Depends(get_db),
+    limit: int = Query(500, ge=1, le=2000),
+) -> dict:
+    """Transcript + N-ATLaS reply for submission. No voice files, no raw phone."""
+    return {"interactions": await db.list_interactions(limit)}
+
+
+@app.get("/interactions.csv", dependencies=[Depends(verify_api_key)])
+async def interactions_csv(
+    db: Database = Depends(get_db),
+    limit: int = Query(500, ge=1, le=2000),
+) -> Response:
+    rows = await db.list_interactions(limit)
+    buf = io.StringIO()
+    fields = [
+        "id",
+        "created_at",
+        "channel",
+        "language",
+        "question_text",
+        "response_text",
+        "intent_domain",
+        "processing_time_ms",
+    ]
+    writer = csv.DictWriter(buf, fieldnames=fields, extrasaction="ignore")
+    writer.writeheader()
+    for row in rows:
+        writer.writerow({k: row.get(k, "") for k in fields})
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=interactions.csv"},
+    )
+
+
+@app.post("/interactions", dependencies=[Depends(verify_api_key)])
+async def ingest_interaction(
+    body: SpaceLogIn,
+    db: Database = Depends(get_db),
+) -> dict:
+    """Space (and other UIs) post Q&A here so one log has WhatsApp + reviewer tests."""
+    record = InteractionRecord(
+        session_id=body.session_id or str(uuid.uuid4()),
+        channel=Channel.SPACE,
+        user_phone_hash="",
+        language=body.language,
+        question_text=body.question_text,
+        intent_domain=Domain.GENERAL,
+        response_text=body.response_text,
+        rag_confidence=0.0,
+        out_of_knowledge=False,
+        processing_time_ms=0,
+        retrieved_sources=[],
+    )
+    row_id = await db.log_interaction(record)
+    return {"id": row_id}

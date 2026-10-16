@@ -11,6 +11,7 @@ Key differences from Meta WhatsApp Cloud API (whatsapp.py):
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import os
@@ -26,9 +27,10 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Form, Request
 from fastapi.responses import Response as FastAPIResponse
 
 from app.config import Settings
-from app.dependencies import get_orchestrator, get_session_store, get_settings
-from app.models.schemas import Channel, Language, PipelineRequest
+from app.dependencies import get_db, get_orchestrator, get_session_store, get_settings
+from app.models.schemas import Channel, Domain, InteractionRecord, Language, PipelineRequest
 from app.pipeline.orchestrator import PipelineOrchestrator
+from app.pipeline.space_hotline import SpaceHotlineError, ask_space
 from app.services.session import SessionStore
 from app.utils.hashing import hash_phone
 from app.utils.phone import normalize_ng_phone
@@ -258,13 +260,37 @@ async def _process_voice_note(
 
         log.info("downloading_voice_note", media_type=media_content_type)
 
+        response: httpx.Response | None = None
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(
-                media_url,
-                auth=(settings.twilio_account_sid, settings.twilio_auth_token),
-                follow_redirects=True,
-            )
-            response.raise_for_status()
+            last_error: Exception | None = None
+            for attempt in range(5):
+                try:
+                    response = await client.get(
+                        media_url,
+                        auth=(settings.twilio_account_sid, settings.twilio_auth_token),
+                        follow_redirects=True,
+                    )
+                    if response.status_code in {404, 409, 425}:
+                        log.warning(
+                            "twilio_media_not_ready",
+                            status=response.status_code,
+                            attempt=attempt + 1,
+                        )
+                        await asyncio.sleep(1.5)
+                        continue
+                    response.raise_for_status()
+                    last_error = None
+                    break
+                except httpx.HTTPStatusError as e:
+                    last_error = e
+                    if e.response.status_code >= 500:
+                        await asyncio.sleep(1.5)
+                        continue
+                    raise
+            if response is None or last_error is not None or response.status_code >= 400:
+                if last_error:
+                    raise last_error
+                response.raise_for_status()  # type: ignore[union-attr]
 
         ext_map = {
             "audio/ogg": ".ogg",
@@ -281,6 +307,72 @@ async def _process_voice_note(
 
         log.info("voice_note_downloaded", path=tmp_audio_path, size=len(response.content))
 
+        if settings.natlas_backend == "space":
+            try:
+                transcript, reply, audio_path = await ask_space(
+                    tmp_audio_path, language.value, settings
+                )
+            except SpaceHotlineError as e:
+                tmp_audio_path = None
+                try:
+                    await _send_twilio_message(
+                        to=f"whatsapp:{phone_number}",
+                        body=e.user_message,
+                        settings=settings,
+                    )
+                except TwilioRateLimited:
+                    log.error("space_error_skipped_rate_limit")
+                return
+            Path(tmp_audio_path).unlink(missing_ok=True)
+            tmp_audio_path = None
+            session_id = str(uuid.uuid4())
+            try:
+                db = await get_db()
+                await db.log_interaction(
+                    InteractionRecord(
+                        session_id=session_id,
+                        channel=Channel.WHATSAPP,
+                        user_phone_hash=phone_hash,
+                        language=language,
+                        question_text=transcript,
+                        intent_domain=Domain.GENERAL,
+                        response_text=reply,
+                        rag_confidence=0.0,
+                        out_of_knowledge=False,
+                        processing_time_ms=0,
+                        retrieved_sources=[],
+                    )
+                )
+            except Exception:
+                log.exception("space_interaction_log_failed")
+            media_url = None
+            if audio_path:
+                media_url = f"{settings.app_base_url}/audio/{Path(audio_path).name}"
+            body = reply or transcript or "I heard you, but N-ATLaS returned an empty reply."
+            if transcript:
+                body = f"Heard: {transcript}\n\n{body}"
+            try:
+                await _send_twilio_message(
+                    to=f"whatsapp:{phone_number}",
+                    body=body,
+                    settings=settings,
+                    media_url=media_url,
+                )
+            except TwilioRateLimited:
+                log.error(
+                    "twilio_sandbox_rate_limited_answer_not_delivered",
+                    language=language.value,
+                    response_text=reply,
+                )
+                return
+            log.info(
+                "voice_note_processed",
+                language=language.value,
+                via="space",
+                response_length=len(reply),
+            )
+            return
+
         result = await orchestrator.process(
             PipelineRequest(
                 session_id=str(uuid.uuid4()),
@@ -292,20 +384,25 @@ async def _process_voice_note(
         )
         tmp_audio_path = None
 
-        await _send_twilio_message(
-            to=f"whatsapp:{phone_number}",
-            body=result.response_text,
-            settings=settings,
-        )
-
+        # One Twilio message: N-ATLaS text + Soro/gTTS audio (two messages 429 the sandbox).
+        media_url = None
         if result.response_audio_path:
-            audio_url = f"{settings.app_base_url}/audio/{Path(result.response_audio_path).name}"
+            media_url = f"{settings.app_base_url}/audio/{Path(result.response_audio_path).name}"
+        try:
             await _send_twilio_message(
                 to=f"whatsapp:{phone_number}",
-                body="🔊 Listen to the response:",
-                media_url=audio_url,
+                body=result.response_text,
                 settings=settings,
+                media_url=media_url,
             )
+        except TwilioRateLimited:
+            log.error(
+                "twilio_sandbox_rate_limited_answer_not_delivered",
+                language=language.value,
+                intent=result.intent_domain.value,
+                response_text=result.response_text,
+            )
+            return
 
         log.info(
             "voice_note_processed",
@@ -314,6 +411,8 @@ async def _process_voice_note(
             response_length=len(result.response_text),
         )
 
+    except TwilioRateLimited:
+        log.error("twilio_sandbox_rate_limited")
     except Exception as e:
         log.error("voice_note_processing_failed", error=str(e))
         try:
@@ -322,6 +421,8 @@ async def _process_voice_note(
                 body="⚠️ Sorry, I couldn't process your voice note. Please try again.",
                 settings=settings,
             )
+        except TwilioRateLimited:
+            log.error("error_reply_skipped_rate_limit")
         except Exception:
             log.error("error_reply_failed")
 
@@ -331,6 +432,10 @@ async def _process_voice_note(
                 os.unlink(tmp_audio_path)
             except OSError:
                 pass
+
+
+class TwilioRateLimited(Exception):
+    """Twilio WhatsApp sandbox daily/rate cap — retrying makes it worse."""
 
 
 async def _send_twilio_message(
@@ -356,7 +461,11 @@ async def _send_twilio_message(
             data=data,
             auth=(settings.twilio_account_sid, settings.twilio_auth_token),
         )
-        response.raise_for_status()
 
+    if response.status_code == 429:
+        logger.warning("twilio_rate_limited", retry_after=response.headers.get("Retry-After"))
+        raise TwilioRateLimited("Twilio WhatsApp sandbox rate limit")
+
+    response.raise_for_status()
     suffix = to[-4:] if len(to) >= 4 else to
     logger.info("twilio_message_sent", to=suffix, body_length=len(body))
