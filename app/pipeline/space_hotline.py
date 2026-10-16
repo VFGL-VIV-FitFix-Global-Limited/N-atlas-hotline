@@ -36,12 +36,36 @@ def _audio_src(audio: object) -> str | None:
     return None
 
 
+def _gradio_client(space_id: str, token: str | None):
+    import inspect
+
+    from gradio_client import Client
+
+    kwargs: dict = {}
+    params = inspect.signature(Client.__init__).parameters
+    if token:
+        if "token" in params:
+            kwargs["token"] = token
+        elif "hf_token" in params:
+            kwargs["hf_token"] = token
+        else:
+            try:
+                from huggingface_hub import login
+
+                login(token=token, add_to_git_credential=False)
+            except Exception:
+                logger.warning("hf_login_for_gradio_client_failed")
+    if "verbose" in params:
+        kwargs["verbose"] = False
+    return Client(space_id, **kwargs)
+
+
 def _predict(audio_path: str, language: str, settings: Settings) -> tuple[str, str, str | None]:
-    from gradio_client import Client, handle_file
+    from gradio_client import handle_file
 
     radio = RADIO.get(language, "English")
     token = settings.hf_token or None
-    client = Client(settings.hf_space_id, hf_token=token, verbose=False)
+    client = _gradio_client(settings.hf_space_id, token)
     raw = client.predict(handle_file(audio_path), radio, api_name="/ask")
     if not isinstance(raw, (list, tuple)) or len(raw) < 2:
         raise SpaceHotlineError(f"unexpected Space response: {type(raw)}")
